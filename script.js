@@ -4,8 +4,8 @@
   // ======================== REPOSITORY CONFIGURATION ========================
   // Replace these values with the public GitHub repository that stores your PDFs.
   const CONFIG = Object.freeze({
-    owner: "YOUR_GITHUB_USERNAME",
-    repo: "STEM-Atlas",
+    owner: "Alpha786876",
+    repo: "TheStemAtlas",
     branch: "main",
     pdfRoot: "",                 // Optional, e.g. "Library". Leave empty for repository root.
     cacheMinutes: 10,
