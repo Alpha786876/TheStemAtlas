@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c0b09">
+  <meta name="description" content="STEM Atlas by Milan C Soni — an independent digital learning library for science, technology, engineering and mathematics.">
+  <title>STEM Atlas — Explore. Learn. Discover.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    (() => {
+      try {
+        const saved = localStorage.getItem("stem-atlas-theme");
+        const theme = saved || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        document.documentElement.dataset.theme = theme;
+      } catch (_) {}
+    })();
+  </script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header" id="top">
+    <a class="brand" href="#home" aria-label="STEM Atlas home">
+      <span class="brand-mark" aria-hidden="true">✳</span>
+      <span class="brand-copy"><strong>STEM ATLAS</strong><small>BY MILAN C SONI</small></span>
+    </a>
+
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <a href="#home" class="nav-link is-active">Home</a>
+      <a href="#library" class="nav-link">Library</a>
+      <a href="#explore" class="nav-link">Explore</a>
+      <a href="#about" class="nav-link">About</a>
+    </nav>
+
+    <div class="header-actions">
+      <button class="icon-button theme-toggle" id="themeToggle" type="button" aria-label="Switch to light theme" title="Toggle theme">
+        <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg>
+      </button>
+      <a class="button button-small button-gold header-cta" href="#library">Browse library <span aria-hidden="true">↗</span></a>
+      <button class="icon-button menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="mobileNav" aria-label="Open navigation">
+        <span></span><span></span>
+      </button>
+    </div>
+
+    <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation" hidden>
+      <a href="#home">Home</a><a href="#library">Library</a><a href="#explore">Explore</a><a href="#about">About</a>
+      <a href="#library" class="mobile-nav-cta">Browse library ↗</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero section-shell" id="home" aria-labelledby="heroTitle">
+      <div class="hero-atmosphere" aria-hidden="true"></div>
+      <div class="hero-copy reveal">
+        <p class="eyebrow"><span class="eyebrow-line"></span> AN INDEPENDENT DIGITAL LEARNING LIBRARY</p>
+        <h1 id="heroTitle">Curiosity has<br><em>no boundaries.</em></h1>
+        <p class="hero-description">A growing collection of books and learning resources across science, technology, engineering and mathematics.</p>
+        <div class="hero-actions">
+          <a class="button button-gold" href="#library">Explore the library <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href="#about">Discover STEM Atlas <span aria-hidden="true">→</span></a>
+        </div>
+        <p class="hero-footnote">OPEN KNOWLEDGE <span>·</span> ALWAYS IN REACH</p>
+      </div>
+
+      <div class="atlas-visual" aria-label="Abstract orbital illustration representing exploration and knowledge">
+        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit orbit-three"></div>
+        <div class="axis axis-horizontal"></div><div class="axis axis-vertical"></div>
+        <div class="orbit-node node-one"><span>01 / SCIENCE</span></div>
+        <div class="orbit-node node-two"><span>02 / DISCOVERY</span></div>
+        <div class="orbit-node node-three"><span>03 / KNOWLEDGE</span></div>
+        <div class="atlas-core"><span>A</span></div>
+        <div class="core-halo"></div>
+        <div class="visual-coordinate coordinate-a">N 28° 12′</div>
+        <div class="visual-coordinate coordinate-b">FIELD NOTES / 001</div>
+      </div>
+
+      <div class="hero-bottomline" aria-hidden="true"><span>01 — EXPLORE</span><span class="bottomline-rule"></span><span>AN OPEN MAP OF IDEAS</span></div>
+    </section>
+
+    <section class="metrics-strip section-shell" aria-label="Library principles">
+      <div class="metric"><strong>04</strong><span>CORE STEM DISCIPLINES</span></div>
+      <div class="metric"><strong>∞</strong><span>ROOM TO KEEP EXPLORING</span></div>
+      <div class="metric"><strong>OPEN</strong><span>ACCESSIBLE LEARNING</span></div>
+      <div class="metric"><strong>01</strong><span>GROWING COLLECTION</span></div>
+    </section>
+
+    <section class="library-section" id="library" aria-labelledby="libraryTitle">
+      <div class="section-shell library-inner">
+        <div class="section-heading reveal">
+          <div>
+            <p class="eyebrow"><span class="eyebrow-line"></span> THE COLLECTION</p>
+            <h2 id="libraryTitle">A library built<br><em>for explorers.</em></h2>
+            <p class="section-description">Discover ideas, build foundations and follow your curiosity across a growing collection of digital books.</p>
+          </div>
+          <div class="collection-aside">
+            <span class="aside-kicker">CURATED FOR THE CURIOUS</span>
+            <strong id="collectionCount">Explore by subject</strong>
+            <span class="aside-caption" id="collectionSubcount">A collection that keeps growing.</span>
+          </div>
+        </div>
+
+        <div class="library-tools">
+          <form class="search-form" id="searchForm" role="search">
+            <label class="sr-only" for="bookSearch">Search books, subjects and folders</label>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 5 5"></path></svg>
+            <input id="bookSearch" type="search" placeholder="Search titles, subjects or folders..." autocomplete="off">
+            <button class="clear-search" id="clearSearch" type="button" aria-label="Clear search" hidden>×</button>
+            <kbd>ENTER ↵</kbd>
+          </form>
+          <label class="sort-control">Sort
+            <select id="sortSelect" aria-label="Sort books">
+              <option value="name">A–Z</option>
+              <option value="repo">Repository order</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="filter-row" id="filterRow" aria-label="Filter by category">
+          <div class="filter-chips" id="categoryFilters">
+            <button class="filter-chip is-selected" type="button" data-category="all" aria-pressed="true">All resources</button>
+          </div>
+          <label class="subcategory-wrap" id="subcategoryWrap" hidden>
+            <span class="sr-only">Filter by subcategory</span>
+            <select id="subcategoryFilter"><option value="all">All subcategories</option></select>
+          </label>
+        </div>
+
+        <div class="library-status" id="libraryStatus" role="status" aria-live="polite">
+          <span class="status-dot"></span><span id="statusText">Preparing the collection…</span>
+          <button type="button" id="retryLoad" class="retry-button" hidden>Try again</button>
+        </div>
+
+        <div class="catalogue-grid" id="bookGrid" aria-live="polite" aria-busy="true"></div>
+        <div class="empty-state" id="emptyState" hidden>
+          <span class="empty-symbol" aria-hidden="true">⌕</span>
+          <h3>No books found</h3>
+          <p>Try another title, subject or folder name.</p>
+          <button class="button button-outline" type="button" id="resetFilters">Clear filters</button>
+        </div>
+
+        <div class="library-footer-note"><span class="note-mark">✳</span><span>New titles appear automatically when PDFs are added to the public GitHub collection.</span></div>
+      </div>
+    </section>
+
+    <section class="explore-section section-shell" id="explore" aria-labelledby="exploreTitle">
+      <div class="section-heading explore-heading reveal">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-line"></span> FIND YOUR NEXT FRONTIER</p>
+          <h2 id="exploreTitle">Knowledge has<br><em>many paths.</em></h2>
+        </div>
+        <p class="explore-intro">Follow a subject, open a new door, and see where the questions lead. Explore the subjects represented in the collection.</p>
+      </div>
+      <div class="subject-map" id="subjectMap">
+        <div class="subject-empty">Subjects will appear here when the repository contains PDFs.</div>
+      </div>
+    </section>
+
+    <section class="about-section" id="about" aria-labelledby="aboutTitle">
+      <div class="about-glow" aria-hidden="true"></div>
+      <div class="section-shell about-inner reveal">
+        <p class="eyebrow"><span class="eyebrow-line"></span> THE IDEA BEHIND THE ATLAS</p>
+        <h2 id="aboutTitle">Knowledge should<br><em>be within reach.</em></h2>
+        <p>STEM Atlas is an independent digital learning library created by Milan C Soni. It brings learning resources together in one simple place, making it easier to discover, read and revisit ideas.</p>
+        <a class="text-link" href="#library">Find something to explore <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="section-shell footer-inner">
+      <a class="brand footer-brand" href="#top">
+        <span class="brand-mark" aria-hidden="true">✳</span>
+        <span class="brand-copy"><strong>STEM ATLAS</strong><small>BY MILAN C SONI</small></span>
+      </a>
+      <p class="footer-tagline">EXPLORE. LEARN. DISCOVER.</p>
+      <div class="footer-bottom"><span>© <span id="currentYear"></span> STEM ATLAS. All rights reserved.</span><a href="#top">Back to top ↑</a></div>
+    </div>
+  </footer>
+
+  <div class="transition-overlay" id="transitionOverlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Book arrival animation">
+    <div class="globe-stage" aria-hidden="true">
+      <div class="atlas-emblem">
+        <span class="atlas-emblem-ring"></span><span class="atlas-emblem-letter">A</span>
+        <svg class="atlas-compass" viewBox="0 0 48 48"><circle cx="24" cy="24" r="19"/><path d="M24 5v38M5 24h38M24 10l5 14-5 14-5-14z"/><path class="compass-needle" d="M24 8l4 16-4 16-4-16z"/></svg>
+      </div>
+      <div class="globe-shell">
+        <div class="globe-rotor">
+          <svg class="globe-art" viewBox="0 0 600 600" role="img" aria-label="Blue and green illustrated globe">
+            <defs><clipPath id="globeClip"><circle cx="300" cy="300" r="292"/></clipPath><radialGradient id="oceanShade" cx="35%" cy="28%"><stop offset="0" stop-color="#8bd8f0"/><stop offset=".62" stop-color="#54acd4"/><stop offset="1" stop-color="#286d9c"/></radialGradient></defs>
+            <circle cx="300" cy="300" r="292" fill="#69b9dc"/>
+            <g clip-path="url(#globeClip)" class="continents">
+              <path d="M42 142l40-49 58-21 37 13 22 38-16 25-43 10-13 34-39 8-24 37-35-8-18-39zM165 232l39-20 35 17 13 42-20 35-5 53-27 44-25-17-8-56-25-43zM280 75l49-34 65 13 30 29-14 36-51 15-18 32-45-7-34-35zM332 188l45-23 61 16 32 38-19 34-49 10-20 39-34-7-25-47zM385 346l51-24 60 18 25 42-28 37-63-3-39-29zM489 116l55-20 49 36-12 45-51 13-35-29zM82 425l42-27 48 12 21 42-28 41-59-3-33-29z" fill="#438e52"/>
+              <path d="M96 125l36-34 39-9 24 17-18 22-39 9-15 27-34 1zM179 250l28-17 26 24-10 29-18 44-13 32-17-27 1-45zM305 82l42-27 42 15-10 25-43 9-17 20-31-12zM353 205l33-20 43 15 26 28-25 18-35-3-18 26-27-19z" fill="#285f3d" opacity=".8"/>
+              <g class="globe-grid"><ellipse cx="300" cy="300" rx="130" ry="292"/><ellipse cx="300" cy="300" rx="235" ry="292"/><path d="M8 210h584M8 300h584M8 390h584"/></g>
+            </g>
+            <circle cx="300" cy="300" r="292" fill="none" stroke="rgba(220,248,255,.65)" stroke-width="5"/>
+          </svg>
+        </div>
+        <svg class="flight-trail" viewBox="0 0 1000 600" preserveAspectRatio="none"><path d="M70 430 C180 120 365 70 480 250 S720 480 920 150"/></svg>
+        <svg class="globe-bird" viewBox="0 0 120 90"><path d="M9 57c17-7 26-25 42-27 13-2 20 7 29 13 8 5 17 4 29 0-7 12-18 19-32 19-10 0-17-5-25-8-12-4-24 1-43 3zm38-28c-5-13-2-22 8-27-1 12 4 17 13 22M77 42l19-13-5 19M49 60l-4 15m14-15 5 15"/></svg>
+        <div class="globe-book-token" id="globeBookToken">BOOK</div>
+      </div>
+      <svg class="delivery-bird" viewBox="0 0 150 110" aria-hidden="true"><path d="M8 66c20-8 32-30 51-32 16-2 25 9 37 17 11 7 24 6 44-1-9 16-24 25-42 25-13 0-22-7-33-11-15-5-31 1-57 2zm57-34c-6-17-2-29 11-36-1 16 5 23 17 29M97 47l26-17-7 27M58 72l-5 19m18-19 7 19"/><path class="bird-book-line" d="M75 83l8 9 9-9M78 88l10 0 0 9-10 0zM83 88v9"/></svg>
+    </div>
+    <div class="book-presentation" id="bookPresentation" aria-live="polite">
+      <div class="arrival-book" id="arrivalBook"><span class="arrival-book-mark">✳</span><span class="arrival-book-brand">STEM ATLAS</span><strong id="presentationTitle">Book title</strong><small id="presentationCategory">DIGITAL FIELD GUIDE</small></div>
+      <div class="presentation-copy"><p class="presentation-kicker">YOUR NEXT DISCOVERY</p><h2 id="presentationHeading">A new book awaits.</h2><p>Choose how you would like to explore this book.</p>
+        <div class="presentation-actions"><button class="button button-gold" id="presentationView" type="button">View Online ↗</button><a class="button button-outline" id="presentationDownload" href="#" download>Download PDF ↓</a></div>
+      </div>
+    </div>
+    <button class="skip-animation" id="skipAnimation" type="button">SKIP</button>
+    <button class="close-presentation" id="closePresentation" type="button" aria-label="Return to the library">×</button>
+  </div>
+
+  <section class="reader-modal" id="readerModal" role="dialog" aria-modal="true" aria-labelledby="readerTitle" hidden>
+    <div class="reader-header">
+      <div class="reader-heading"><span class="reader-kicker">STEM ATLAS / READING ROOM</span><h2 id="readerTitle">Book title</h2></div>
+      <div class="reader-actions">
+        <a id="readerNewTab" class="reader-action" href="#" target="_blank" rel="noopener">Open in new tab ↗</a>
+        <a id="readerDownload" class="reader-action reader-download" href="#" download>Download ↓</a>
+        <button class="icon-button reader-close" id="readerClose" type="button" aria-label="Close reader">×</button>
+      </div>
+    </div>
+    <div class="reader-frame-wrap">
+      <iframe id="pdfFrame" title="PDF document reader" src="about:blank"></iframe>
+      <div class="reader-fallback" id="readerFallback" hidden>
+        <span class="fallback-symbol">↗</span><h3>The in-page reader could not load this PDF.</h3>
+        <p>Open the document in a new browser tab or download the original file.</p>
+        <a class="button button-gold" id="fallbackOpen" href="#" target="_blank" rel="noopener">Open PDF ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <noscript><div class="noscript-message">STEM Atlas needs JavaScript enabled to discover books from its GitHub library.</div></noscript>
+</body>
+</html>
