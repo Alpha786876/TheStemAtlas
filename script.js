@@ -1,711 +1,352 @@
+/* ================= STEM Atlas · script.js ================= */
+const CFG = {
+  folder: 'books',  // folder in your GitHub repo that holds the PDFs
+  owner: '',        // leave '' to auto-detect from the website address
+  repo: '',         // leave '' to auto-detect
+  branch: '',       // leave '' to try "main", then "master"
+  ambient: 0.58     // 0 = fully lit room, 1 = pitch black (darkness far from the lanterns)
+};
+const $ = s => document.querySelector(s);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+$('#year').textContent = new Date().getFullYear();
+
+/* ---------------- LANTERNS ---------------- */
+const LANTERNS = [
+  { type:'top',  x:'13%', rope:44, dur:5.8, amp:2.6, delay:-1.4 },
+  { type:'top',  x:'50%', rope:74, dur:6.9, amp:2.2, delay:-3.8 },
+  { type:'top',  x:'87%', rope:54, dur:6.2, amp:2.8, delay:-0.6 },
+  { type:'side', side:'left',  y:'38%', arm:30, rope:34, dur:6.4, amp:3.2, delay:-2.1 },
+  { type:'side', side:'left',  y:'72%', arm:26, rope:48, dur:7.1, amp:2.8, delay:-4.5, extra:true },
+  { type:'side', side:'right', y:'46%', arm:30, rope:42, dur:6.7, amp:3.0, delay:-0.9 },
+  { type:'side', side:'right', y:'78%', arm:26, rope:30, dur:6.0, amp:3.2, delay:-3.0, extra:true }
+];
+document.body.insertAdjacentHTML('afterbegin',
+ `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+   <radialGradient id="lg" cx="50%" cy="48%" r="60%"><stop offset="0" stop-color="#fff6cf"/><stop offset=".45" stop-color="#ffc766"/><stop offset="1" stop-color="#b8661a"/></radialGradient>
+   <linearGradient id="mt" x1="0" x2="1"><stop offset="0" stop-color="#2b2118"/><stop offset=".5" stop-color="#7a6040"/><stop offset="1" stop-color="#241a12"/></linearGradient>
+ </defs></svg>`);
+const LANTERN_SVG = `<svg viewBox="0 0 60 100" aria-hidden="true">
+  <circle cx="30" cy="6" r="4.5" fill="none" stroke="url(#mt)" stroke-width="2.4"/>
+  <path d="M30 10 L16 24 H44 Z" fill="url(#mt)"/>
+  <rect x="12" y="24" width="36" height="4" rx="1.5" fill="url(#mt)"/>
+  <rect x="15" y="28" width="30" height="42" rx="3" fill="url(#lg)"/>
+  <g stroke="#2a1d12" stroke-width="2"><line x1="15" y1="28" x2="15" y2="70"/><line x1="45" y1="28" x2="45" y2="70"/></g>
+  <ellipse class="flame" cx="30" cy="52" rx="4.5" ry="9" fill="#fffbe6"/>
+  <rect x="12" y="70" width="36" height="4" rx="1.5" fill="url(#mt)"/>
+  <path d="M17 74 L23 86 H37 L43 74 Z" fill="url(#mt)"/>
+  <circle cx="30" cy="90" r="3" fill="url(#mt)"/></svg>`;
+$('#lanterns').innerHTML = LANTERNS.map(c => {
+  const pos = c.type === 'top' ? `--x:${c.x};` : `--y:${c.y};--arm:${c.arm}px;`;
+  return `<div class="lantern ${c.type === 'top' ? 'top' : 'side ' + c.side}${c.extra ? ' extra' : ''}"
+    style="${pos}--rope:${c.rope}px;--dur:${c.dur}s;--delay:${c.delay}s;--amp:${c.amp}deg" data-power="${c.power || 1}">
+    ${c.type === 'side' ? '<i class="arm"></i>' : ''}
+    <div class="hang"><div class="swing"><i class="rope"></i>${LANTERN_SVG}</div></div></div>`;
+}).join('');
+
+/* ---------------- LIGHT PHYSICS ----------------
+   A dark layer covers the page. Each lantern "cuts" a hole in it using a
+   radial gradient whose brightness falls off like real light (inverse-square
+   style). Several lanterns combine multiplicatively. Positions are read from
+   the swinging lantern every frame, so the light sways and flickers with it. */
+const lamps = [...document.querySelectorAll('.lantern')].map((el, i) => ({
+  flame: el.querySelector('.flame'), power: +el.dataset.power || 1, seed: i * 1.9 + 0.7
+}));
 (() => {
-  "use strict";
-
-  // ======================== REPOSITORY CONFIGURATION ========================
-  // Replace these values with the public GitHub repository that stores your PDFs.
-  const CONFIG = Object.freeze({
-    owner: "Alpha786876",
-    repo: "TheStemAtlas",
-    branch: "main",
-    pdfRoot: "",                 // Optional, e.g. "Library". Leave empty for repository root.
-    cacheMinutes: 10,
-    apiBase: "https://api.github.com"
-  });
-  // ==========================================================================
-
-  const $ = (selector, root = document) => root.querySelector(selector);
-  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const elements = {
-    themeToggle: $("#themeToggle"), menuToggle: $("#menuToggle"), mobileNav: $("#mobileNav"),
-    searchForm: $("#searchForm"), search: $("#bookSearch"), clearSearch: $("#clearSearch"),
-    sort: $("#sortSelect"), filters: $("#categoryFilters"), subWrap: $("#subcategoryWrap"),
-    subFilter: $("#subcategoryFilter"), status: $("#libraryStatus"), statusText: $("#statusText"),
-    retry: $("#retryLoad"), grid: $("#bookGrid"), empty: $("#emptyState"),
-    count: $("#collectionCount"), subcount: $("#collectionSubcount"), subjectMap: $("#subjectMap"),
-    overlay: $("#transitionOverlay"), skip: $("#skipAnimation"), closePresentation: $("#closePresentation"),
-    globeBookToken: $("#globeBookToken"), presentation: $("#bookPresentation"),
-    presentationTitle: $("#presentationTitle"), presentationCategory: $("#presentationCategory"),
-    presentationHeading: $("#presentationHeading"), presentationView: $("#presentationView"),
-    presentationDownload: $("#presentationDownload"), arrivalBook: $("#arrivalBook"),
-    reader: $("#readerModal"), readerTitle: $("#readerTitle"), frame: $("#pdfFrame"),
-    readerNewTab: $("#readerNewTab"), readerDownload: $("#readerDownload"),
-    fallbackOpen: $("#fallbackOpen"), fallback: $("#readerFallback"), readerClose: $("#readerClose")
+  const dark = $('#dark'), glow = $('#glow');
+  const dc = dark.getContext('2d'), gc = glow.getContext('2d'), S = 0.5;
+  let W = 0, H = 0;
+  const size = () => {
+    W = dark.clientWidth; H = dark.clientHeight;
+    for (const c of [dark, glow]) { c.width = Math.max(1, (W * S) | 0); c.height = Math.max(1, (H * S) | 0); }
   };
+  size(); addEventListener('resize', size);
+  const fall = t => t >= 1 ? 0 : Math.pow(1 - t * t, 2) / (1 + 4 * t * t);   // 1 at the flame, 0 at the edge
+  const stops = (g, rgb, peak) => { for (let i = 0; i <= 16; i++) { const t = i / 16; g.addColorStop(t, `rgba(${rgb},${Math.min(1, peak * fall(t)).toFixed(3)})`); } };
+  const flick = (t, s) => reduceMotion ? 1 : 1 + 0.045 * Math.sin(t * 7.3 + s) + 0.03 * Math.sin(t * 12.9 + s * 2.1) + 0.02 * Math.sin(t * 3.3 + s * 0.6);
 
-  const state = {
-    books: [], categories: [], activeCategory: "all", activeSubcategory: "all",
-    query: "", sort: "name", loadError: null, animationTimer: null,
-    animationId: 0, animationSeen: false, selectedBook: null,
-    readerBook: null, lastFocused: null, audioContext: null,
-    reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches
-  };
-
-  const palette = [
-    ["#3c2d1b", "#17130d", "#f2cf85"], ["#29352f", "#101915", "#d9c58c"],
-    ["#343047", "#171321", "#d8bd83"], ["#3d2b28", "#1b1110", "#f0c68a"],
-    ["#283443", "#101820", "#d5c18b"], ["#3a3522", "#17150c", "#e6c47b"]
-  ];
-
-  function setStatus(message, kind = "normal", retry = false) {
-    elements.statusText.textContent = message;
-    elements.status.classList.toggle("is-error", kind === "error");
-    elements.retry.hidden = !retry;
-  }
-
-  function validConfig() {
-    return CONFIG.owner && CONFIG.repo &&
-      CONFIG.owner !== "YOUR_GITHUB_USERNAME" &&
-      !/[<> ]/.test(CONFIG.owner + CONFIG.repo);
-  }
-
-  function encodePath(path) {
-    return path.split("/").map(encodeURIComponent).join("/");
-  }
-
-  function repoCacheKey() {
-    return `stem-atlas-catalogue:${CONFIG.owner}/${CONFIG.repo}:${CONFIG.branch}:${CONFIG.pdfRoot}`;
-  }
-
-  function readCache() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(repoCacheKey()) || "null");
-      if (!parsed || !Array.isArray(parsed.books)) return null;
-      if (Date.now() - parsed.savedAt > CONFIG.cacheMinutes * 60_000) return null;
-      return parsed.books;
-    } catch (_) { return null; }
-  }
-
-  function writeCache(books) {
-    try {
-      localStorage.setItem(repoCacheKey(), JSON.stringify({ savedAt: Date.now(), books }));
-    } catch (_) { /* Storage may be unavailable or full. */ }
-  }
-
-  async function githubJSON(url) {
-    const response = await fetch(url, {
-      headers: { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" }
-    });
-    if (!response.ok) {
-      let detail = "";
-      try {
-        const data = await response.json();
-        detail = data.message || "";
-      } catch (_) {}
-      const error = new Error(detail || `GitHub returned HTTP ${response.status}.`);
-      error.status = response.status;
-      error.remaining = response.headers.get("X-RateLimit-Remaining");
-      throw error;
+  function frame(ms) {
+    const t = ms / 1000, R = Math.max(260, Math.min(Math.hypot(W, H) * 0.55, 820));
+    dc.globalCompositeOperation = 'source-over';
+    dc.clearRect(0, 0, dark.width, dark.height);
+    dc.fillStyle = `rgba(3,2,2,${CFG.ambient})`;
+    dc.fillRect(0, 0, dark.width, dark.height);
+    gc.globalCompositeOperation = 'source-over';
+    gc.clearRect(0, 0, glow.width, glow.height);
+    for (const l of lamps) {
+      const r = l.flame.getBoundingClientRect(); if (!r.width) continue;
+      const x = (r.left + r.width / 2) * S, y = (r.top + r.height / 2) * S, f = flick(t, l.seed) * l.power;
+      dc.globalCompositeOperation = 'destination-out';
+      let g = dc.createRadialGradient(x, y, 0, x, y, R * S); stops(g, '0,0,0', 0.97 * f);
+      dc.fillStyle = g; dc.fillRect(0, 0, dark.width, dark.height);
+      gc.globalCompositeOperation = 'lighter';
+      g = gc.createRadialGradient(x, y, 0, x, y, R * 0.8 * S); stops(g, '255,168,76', 0.2 * f);
+      gc.fillStyle = g; gc.fillRect(0, 0, glow.width, glow.height);
+      g = gc.createRadialGradient(x, y, 0, x, y, 70 * S); stops(g, '255,214,140', 0.5 * f);
+      gc.fillStyle = g; gc.fillRect(0, 0, glow.width, glow.height);
     }
-    return response.json();
+    requestAnimationFrame(frame);
   }
-
-  function normalizedBook(path, sha, size) {
-    const parts = path.split("/");
-    const filename = parts.pop();
-    const withoutExtension = filename.replace(/\.pdf$/i, "");
-    const rootParts = CONFIG.pdfRoot ? CONFIG.pdfRoot.split("/").filter(Boolean).length : 0;
-    const relativeFolders = parts.slice(rootParts);
-    const title = withoutExtension
-      .replace(/[_-]+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .replace(/\b\w/g, char => char.toUpperCase());
-    const category = relativeFolders[0] || "Uncategorised";
-    const subcategories = relativeFolders.slice(1);
-    const rawUrl = `https://raw.githubusercontent.com/${encodeURIComponent(CONFIG.owner)}/${encodeURIComponent(CONFIG.repo)}/${encodeURIComponent(CONFIG.branch)}/${encodePath(path)}`;
-    return {
-      id: path, path, title: title || "Untitled PDF", category,
-      subcategory: subcategories.join(" / "),
-      folder: relativeFolders.join(" / ") || "Root",
-      sha: sha || "", size: Number(size) || 0, rawUrl
-    };
-  }
-
-  function isPdfPath(path) {
-    return /\.pdf$/i.test(path) && (!CONFIG.pdfRoot || path === CONFIG.pdfRoot || path.startsWith(`${CONFIG.pdfRoot}/`));
-  }
-
-  async function discoverWithRecursiveTree() {
-    const branchData = await githubJSON(`${CONFIG.apiBase}/repos/${encodeURIComponent(CONFIG.owner)}/${encodeURIComponent(CONFIG.repo)}/branches/${encodeURIComponent(CONFIG.branch)}`);
-    const treeSha = branchData?.commit?.commit?.tree?.sha || branchData?.commit?.sha;
-    if (!treeSha) throw new Error("Could not resolve the selected GitHub branch.");
-    const tree = await githubJSON(`${CONFIG.apiBase}/repos/${encodeURIComponent(CONFIG.owner)}/${encodeURIComponent(CONFIG.repo)}/git/trees/${treeSha}?recursive=1`);
-    if (!Array.isArray(tree.tree)) throw new Error("GitHub returned an unexpected repository tree.");
-    if (tree.truncated) return null;
-    return tree.tree
-      .filter(item => item.type === "blob" && isPdfPath(item.path))
-      .map(item => normalizedBook(item.path, item.sha, item.size));
-  }
-
-  async function discoverByDirectoryWalk() {
-    const rootUrl = `${CONFIG.apiBase}/repos/${encodeURIComponent(CONFIG.owner)}/${encodeURIComponent(CONFIG.repo)}/contents`;
-    const queue = [{ path: CONFIG.pdfRoot, url: CONFIG.pdfRoot ? `${rootUrl}/${encodePath(CONFIG.pdfRoot)}` : rootUrl }];
-    const visited = new Set();
-    const books = [];
-    while (queue.length) {
-      const current = queue.shift();
-      if (visited.has(current.path)) continue;
-      visited.add(current.path);
-      const entries = await githubJSON(`${current.url}?ref=${encodeURIComponent(CONFIG.branch)}`);
-      if (!Array.isArray(entries)) continue;
-      for (const entry of entries) {
-        if (entry.type === "dir") {
-          queue.push({ path: entry.path, url: `${rootUrl}/${encodePath(entry.path)}` });
-        } else if (entry.type === "file" && /\.pdf$/i.test(entry.name) && isPdfPath(entry.path)) {
-          books.push(normalizedBook(entry.path, entry.sha, entry.size));
-        }
-      }
-    }
-    return books;
-  }
-
-  async function loadCatalogue({ force = false } = {}) {
-    if (!validConfig()) {
-      state.books = [];
-      renderAll();
-      setStatus("Add your public GitHub owner and repository in the CONFIG block at the top of script.js.", "error");
-      return;
-    }
-    if (!force) {
-      const cached = readCache();
-      if (cached) {
-        state.books = cached;
-        rebuildCategories();
-        renderAll();
-        setStatus(`${cached.length} PDF ${cached.length === 1 ? "book" : "books"} loaded from the recent catalogue cache.`);
-        // Refresh quietly in the background; a successful response replaces the cache.
-        refreshCatalogueInBackground();
-        return;
-      }
-    }
-    elements.grid.setAttribute("aria-busy", "true");
-    setStatus("Mapping the repository and discovering PDF books…");
-    try {
-      let books = await discoverWithRecursiveTree();
-      if (books === null) {
-        setStatus("The repository is large; indexing its folders individually…");
-        books = await discoverByDirectoryWalk();
-      }
-      state.books = books;
-      writeCache(state.books);
-      rebuildCategories();
-      renderAll();
-      setStatus(`${state.books.length} PDF ${state.books.length === 1 ? "book" : "books"} discovered from GitHub.`);
-    } catch (error) {
-      state.loadError = error;
-      // Use stale cache if one exists, but do not hide the failure.
-      const stale = readCache();
-      if (stale) {
-        state.books = stale;
-        rebuildCategories();
-        renderAll();
-        setStatus(`Showing cached books. GitHub refresh failed: ${error.message}`, "error", true);
-      } else {
-        state.books = [];
-        rebuildCategories();
-        renderAll();
-        let message = error.message;
-        if (error.status === 404) message = "Repository or branch not found. Check the owner, repository name and branch in script.js.";
-        if (error.status === 403 && error.remaining === "0") message = "GitHub API rate limit reached. Wait a little and retry, or use the cached catalogue.";
-        if (!navigator.onLine) message = "You appear to be offline. Reconnect and try again.";
-        setStatus(message, "error", true);
-      }
-    } finally {
-      elements.grid.setAttribute("aria-busy", "false");
-    }
-  }
-
-  async function refreshCatalogueInBackground() {
-    try {
-      let books = await discoverWithRecursiveTree();
-      if (books === null) books = await discoverByDirectoryWalk();
-      state.books = books;
-      writeCache(state.books);
-      rebuildCategories();
-      renderAll();
-      setStatus(`${state.books.length} PDF ${state.books.length === 1 ? "book" : "books"} discovered from GitHub.`);
-    } catch (_) {
-      // Existing cached content stays usable. Explicit retry remains available only on a hard failure.
-    }
-  }
-
-  function rebuildCategories() {
-    const map = new Map();
-    for (const book of state.books) {
-      if (!map.has(book.category)) map.set(book.category, []);
-      map.get(book.category).push(book);
-    }
-    state.categories = [...map.entries()]
-      .map(([name, books]) => ({ name, count: books.length }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    if (state.activeCategory !== "all" && !map.has(state.activeCategory)) state.activeCategory = "all";
-    renderFilters();
-    renderSubjects();
-  }
-
-  function renderFilters() {
-    elements.filters.replaceChildren();
-    const all = makeFilterButton("All resources", "all", state.books.length);
-    elements.filters.append(all);
-    for (const category of state.categories) {
-      elements.filters.append(makeFilterButton(category.name, category.name, category.count));
-    }
-    const hasSubcategories = state.books.some(book => book.category === state.activeCategory && book.subcategory);
-    elements.subWrap.hidden = state.activeCategory === "all" || !hasSubcategories;
-    if (!elements.subWrap.hidden) {
-      const options = [...new Set(state.books
-        .filter(book => book.category === state.activeCategory && book.subcategory)
-        .map(book => book.subcategory))].sort((a, b) => a.localeCompare(b));
-      elements.subFilter.replaceChildren(new Option("All subcategories", "all"));
-      options.forEach(value => elements.subFilter.add(new Option(value, value)));
-      if (!options.includes(state.activeSubcategory)) state.activeSubcategory = "all";
-      elements.subFilter.value = state.activeSubcategory;
-    } else {
-      state.activeSubcategory = "all";
-    }
-  }
-
-  function makeFilterButton(label, value, count) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `filter-chip${state.activeCategory === value ? " is-selected" : ""}`;
-    button.dataset.category = value;
-    button.setAttribute("aria-pressed", String(state.activeCategory === value));
-    button.textContent = `${label} · ${count}`;
-    return button;
-  }
-
-  function renderSubjects() {
-    elements.subjectMap.replaceChildren();
-    if (!state.categories.length) {
-      const empty = document.createElement("div");
-      empty.className = "subject-empty";
-      empty.textContent = "Subjects will appear here when the repository contains PDFs.";
-      elements.subjectMap.append(empty);
-      return;
-    }
-    state.categories.forEach((category, index) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "subject-tile";
-      button.dataset.subject = category.name;
-      const number = document.createElement("span");
-      number.className = "subject-number";
-      number.textContent = String(index + 1).padStart(2, "0");
-      const name = document.createElement("span");
-      name.className = "subject-name";
-      name.textContent = category.name;
-      const count = document.createElement("span");
-      count.className = "subject-count";
-      count.textContent = `${category.count} ${category.count === 1 ? "BOOK" : "BOOKS"}`;
-      const arrow = document.createElement("span");
-      arrow.className = "subject-arrow";
-      arrow.setAttribute("aria-hidden", "true");
-      arrow.textContent = "↗";
-      button.append(number, name, count, arrow);
-      elements.subjectMap.append(button);
-    });
-  }
-
-  function getVisibleBooks() {
-    const query = state.query.trim().toLocaleLowerCase();
-    let books = state.books.filter(book => {
-      const categoryMatch = state.activeCategory === "all" || book.category === state.activeCategory;
-      const subMatch = state.activeSubcategory === "all" || book.subcategory === state.activeSubcategory;
-      const haystack = [book.title, book.category, book.subcategory, book.folder, book.path, book.path.replace(/\.pdf$/i, "")]
-        .join(" ").toLocaleLowerCase();
-      return categoryMatch && subMatch && (!query || haystack.includes(query));
-    });
-    if (state.sort !== "repo") {
-      books = [...books].sort((a, b) => a.title.localeCompare(b.title));
-    }
-    return books;
-  }
-
-  function renderAll({ animate = false } = {}) {
-    renderFilters();
-    const books = getVisibleBooks();
-    elements.grid.replaceChildren();
-    elements.grid.hidden = books.length === 0;
-    elements.empty.hidden = books.length !== 0;
-    elements.count.textContent = `${state.books.length} ${state.books.length === 1 ? "book" : "books"}`;
-    elements.subcount.textContent = `${state.categories.length} ${state.categories.length === 1 ? "subject" : "subjects"} represented`;
-    books.forEach((book, index) => {
-      const card = createBookCard(book, index);
-      if (animate) card.style.setProperty("--arrival", `${Math.min(index, 8) * 65}ms`);
-      elements.grid.append(card);
-    });
-    if (state.sort === "repo") {
-      elements.subcount.textContent = "Showing the order returned by the GitHub repository tree.";
-    }
-    elements.grid.setAttribute("aria-busy", "false");
-  }
-
-  function createBookCard(book, index) {
-    const card = document.createElement("article");
-    card.className = "book-card";
-    card.style.setProperty("--arrival", `${Math.min(index, 8) * 55}ms`);
-    const [coverA, coverB, mark] = palette[index % palette.length];
-
-    const cover = document.createElement("div");
-    cover.className = "book-cover";
-    cover.style.setProperty("--cover-a", coverA);
-    cover.style.setProperty("--cover-b", coverB);
-    cover.style.setProperty("--cover-mark", mark);
-    const coverIndex = document.createElement("span");
-    coverIndex.className = "cover-index";
-    coverIndex.textContent = `FIELD GUIDE / ${String(index + 1).padStart(2, "0")}`;
-    const glyph = document.createElement("span");
-    glyph.className = "cover-glyph";
-    glyph.setAttribute("aria-hidden", "true");
-    glyph.textContent = categoryGlyph(book.category);
-    const wordmark = document.createElement("span");
-    wordmark.className = "cover-wordmark";
-    wordmark.textContent = "STEM ATLAS";
-    cover.append(coverIndex, glyph, wordmark);
-
-    const meta = document.createElement("div");
-    meta.className = "book-meta";
-    const category = document.createElement("span");
-    category.className = "book-category";
-    category.textContent = book.category;
-    const label = document.createElement("span");
-    label.className = "pdf-label";
-    label.textContent = "PDF";
-    meta.append(category, label);
-
-    const title = document.createElement("h3");
-    title.className = "book-title";
-    title.textContent = book.title;
-    const path = document.createElement("span");
-    path.className = "book-path";
-    path.title = book.path;
-    path.textContent = book.subcategory || book.folder;
-
-    const actions = document.createElement("div");
-    actions.className = "book-actions";
-    const read = document.createElement("button");
-    read.type = "button";
-    read.className = "book-action primary";
-    read.textContent = "Read online ↗";
-    read.addEventListener("click", () => selectBook(book));
-    const download = document.createElement("a");
-    download.className = "book-action";
-    download.href = book.rawUrl;
-    download.target = "_blank";
-    download.rel = "noopener";
-    download.setAttribute("download", book.title + ".pdf");
-    download.textContent = "Download ↓";
-    download.setAttribute("aria-label", `Download ${book.title} PDF`);
-    actions.append(read, download);
-    card.append(cover, meta, title, path, actions);
-    return card;
-  }
-
-  function categoryGlyph(category) {
-    const key = category.toLowerCase();
-    if (key.includes("math")) return "∑";
-    if (key.includes("phys")) return "∿";
-    if (key.includes("python") || key.includes("program")) return "{ }";
-    if (key.includes("engineer")) return "⌘";
-    if (key.includes("artificial") || key === "ai") return "✳";
-    if (key.includes("chem")) return "⚗";
-    if (key.includes("bio")) return "⌬";
-    return "✧";
-  }
-
-  function playEagleLikeCall() {
-    // A short, generated bird-call cue; no external audio file or network request is needed.
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-    try {
-      const context = state.audioContext || (state.audioContext = new AudioContextClass());
-      if (context.state === "suspended") context.resume();
-      const now = context.currentTime;
-      const master = context.createGain();
-      master.gain.setValueAtTime(0.0001, now);
-      master.gain.exponentialRampToValueAtTime(0.075, now + 0.08);
-      master.gain.exponentialRampToValueAtTime(0.0001, now + 1.05);
-      master.connect(context.destination);
-      [0, 0.16, 0.34].forEach((offset, index) => {
-        const osc = context.createOscillator();
-        const gain = context.createGain();
-        osc.type = index === 1 ? "triangle" : "sawtooth";
-        const base = 1180 - index * 145;
-        osc.frequency.setValueAtTime(base, now + offset);
-        osc.frequency.exponentialRampToValueAtTime(base * 0.63, now + offset + 0.28);
-        osc.frequency.exponentialRampToValueAtTime(base * 0.82, now + offset + 0.5);
-        gain.gain.setValueAtTime(0.0001, now + offset);
-        gain.gain.exponentialRampToValueAtTime(index === 1 ? 0.22 : 0.13, now + offset + 0.035);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.48);
-        osc.connect(gain); gain.connect(master);
-        osc.start(now + offset); osc.stop(now + offset + 0.52);
-      });
-    } catch (_) { /* Audio is optional; animation remains fully usable if blocked. */ }
-  }
-
-  function setPresentation(book) {
-    state.selectedBook = book;
-    elements.presentationTitle.textContent = book.title;
-    elements.presentationCategory.textContent = `${book.category.toUpperCase()} / PDF`;
-    elements.presentationHeading.textContent = book.title;
-    elements.globeBookToken.textContent = book.title.length > 22 ? `${book.title.slice(0, 20)}…` : book.title;
-    elements.presentationDownload.href = book.rawUrl;
-    elements.presentationDownload.setAttribute("download", `${book.title}.pdf`);
-    elements.arrivalBook.style.setProperty("--arrival-cover", palette[Math.abs(book.id.length) % palette.length][0]);
-  }
-
-  function startTransition(book) {
-    finishTransition(false);
-    const id = ++state.animationId;
-    setPresentation(book);
-    elements.overlay.classList.remove("is-presented", "is-active");
-    void elements.overlay.offsetWidth;
-    elements.overlay.classList.add("is-active");
-    elements.overlay.setAttribute("aria-hidden", "false");
-    elements.skip.focus({ preventScroll: true });
-    if (!state.reducedMotion) {
-      // The outline bird is timed to enter after the globe has expanded.
-      window.setTimeout(() => { if (id === state.animationId) playEagleLikeCall(); }, 2500);
-      state.animationTimer = window.setTimeout(() => {
-        if (id === state.animationId) finishTransition(true);
-      }, 8200);
-    } else {
-      state.animationTimer = window.setTimeout(() => {
-        if (id === state.animationId) finishTransition(true);
-      }, 80);
-    }
-    return id;
-  }
-
-  function finishTransition(showPresentation = true) {
-    if (state.animationTimer) clearTimeout(state.animationTimer);
-    state.animationTimer = null;
-    state.animationId++;
-    elements.overlay.classList.remove("is-active");
-    if (showPresentation && state.selectedBook) {
-      elements.overlay.classList.add("is-presented");
-      elements.overlay.setAttribute("aria-hidden", "false");
-      elements.presentationView.focus({ preventScroll: true });
-    } else {
-      elements.overlay.classList.remove("is-presented");
-      elements.overlay.setAttribute("aria-hidden", "true");
-    }
-    state.animationSeen = true;
-  }
-
-  function selectBook(book) {
-    startTransition(book);
-  }
-
-  function openReader(book) {
-    state.readerBook = book;
-    state.lastFocused = document.activeElement;
-    elements.readerTitle.textContent = book.title;
-    elements.readerNewTab.href = book.rawUrl;
-    elements.readerDownload.href = book.rawUrl;
-    elements.readerDownload.setAttribute("download", `${book.title}.pdf`);
-    elements.fallbackOpen.href = book.rawUrl;
-    elements.fallback.hidden = true;
-    elements.frame.hidden = false;
-    elements.frame.src = book.rawUrl;
-    elements.reader.hidden = false;
-    document.body.classList.add("modal-open");
-    elements.readerClose.focus();
-  }
-
-  function closeReader() {
-    if (elements.reader.hidden) return;
-    elements.frame.src = "about:blank";
-    elements.reader.hidden = true;
-    document.body.classList.remove("modal-open");
-    if (state.lastFocused && typeof state.lastFocused.focus === "function") state.lastFocused.focus();
-  }
-
-  function escapeHTML(value) {
-    return String(value).replace(/[&<>"']/g, char => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-    })[char]);
-  }
-
-  function setTheme(theme) {
-    document.documentElement.dataset.theme = theme;
-    try { localStorage.setItem("stem-atlas-theme", theme); } catch (_) {}
-    const next = theme === "dark" ? "light" : "dark";
-    elements.themeToggle.setAttribute("aria-label", `Switch to ${next} theme`);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0c0b09" : "#f4f0e7");
-  }
-
-  function setupTheme() {
-    setTheme(document.documentElement.dataset.theme || "dark");
-    elements.themeToggle.addEventListener("click", () => {
-      setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
-    });
-  }
-
-  function setupNavigation() {
-    elements.menuToggle.addEventListener("click", () => {
-      const open = elements.menuToggle.getAttribute("aria-expanded") !== "true";
-      elements.menuToggle.setAttribute("aria-expanded", String(open));
-      elements.menuToggle.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
-      elements.mobileNav.hidden = !open;
-    });
-    $$("#mobileNav a").forEach(link => link.addEventListener("click", () => {
-      elements.mobileNav.hidden = true;
-      elements.menuToggle.setAttribute("aria-expanded", "false");
-      elements.menuToggle.setAttribute("aria-label", "Open navigation");
-    }));
-    const sections = ["home", "library", "explore", "about"].map(id => document.getElementById(id));
-    if ("IntersectionObserver" in window) {
-      const observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            $$(".desktop-nav .nav-link").forEach(link => {
-              const active = link.getAttribute("href") === `#${entry.target.id}`;
-              link.classList.toggle("is-active", active);
-            });
-          }
-        });
-      }, { rootMargin: "-35% 0px -55% 0px" });
-      sections.forEach(section => section && observer.observe(section));
-    }
-  }
-
-  function setupSearch() {
-    elements.search.addEventListener("input", () => {
-      state.query = elements.search.value;
-      elements.clearSearch.hidden = !state.query;
-      renderAll();
-    });
-    elements.searchForm.addEventListener("submit", event => {
-      event.preventDefault();
-      state.query = elements.search.value;
-      renderAll({ animate: true });
-      const firstMatch = getVisibleBooks()[0];
-      if (firstMatch) selectBook(firstMatch);
-    });
-    elements.clearSearch.addEventListener("click", () => {
-      elements.search.value = "";
-      state.query = "";
-      elements.clearSearch.hidden = true;
-      renderAll();
-      elements.search.focus();
-    });
-    elements.sort.addEventListener("change", () => {
-      state.sort = elements.sort.value;
-      renderAll();
-    });
-    elements.filters.addEventListener("click", event => {
-      const button = event.target.closest("[data-category]");
-      if (!button) return;
-      state.activeCategory = button.dataset.category;
-      state.activeSubcategory = "all";
-      renderAll();
-    });
-    elements.subFilter.addEventListener("change", () => {
-      state.activeSubcategory = elements.subFilter.value;
-      renderAll();
-    });
-    elements.subjectMap.addEventListener("click", event => {
-      const tile = event.target.closest("[data-subject]");
-      if (!tile) return;
-      state.activeCategory = tile.dataset.subject;
-      state.activeSubcategory = "all";
-      renderAll();
-      document.getElementById("library").scrollIntoView({ behavior: state.reducedMotion ? "auto" : "smooth" });
-    });
-    $("#resetFilters").addEventListener("click", () => {
-      state.activeCategory = "all";
-      state.activeSubcategory = "all";
-      state.query = "";
-      elements.search.value = "";
-      elements.clearSearch.hidden = true;
-      renderAll();
-    });
-  }
-
-  function setupAnimation() {
-    elements.skip.addEventListener("click", () => finishTransition(true));
-    elements.presentationView.addEventListener("click", () => {
-      if (state.selectedBook) openReader(state.selectedBook);
-    });
-    elements.closePresentation.addEventListener("click", () => {
-      elements.overlay.classList.remove("is-presented");
-      elements.overlay.setAttribute("aria-hidden", "true");
-    });
-    document.addEventListener("keydown", event => {
-      if (event.key === "Escape") {
-        if (!elements.reader.hidden) closeReader();
-        else if (elements.overlay.classList.contains("is-active")) finishTransition(true);
-        else if (elements.overlay.classList.contains("is-presented")) {
-          elements.overlay.classList.remove("is-presented");
-          elements.overlay.setAttribute("aria-hidden", "true");
-        } else if (!elements.mobileNav.hidden) {
-          elements.mobileNav.hidden = true;
-          elements.menuToggle.setAttribute("aria-expanded", "false");
-        }
-      }
-    });
-  }
-
-  function setupReader() {
-    elements.readerClose.addEventListener("click", closeReader);
-    elements.reader.addEventListener("click", event => {
-      if (event.target === elements.reader) closeReader();
-    });
-    elements.frame.addEventListener("error", () => {
-      elements.frame.hidden = true;
-      elements.fallback.hidden = false;
-    });
-    // Native PDF viewers may fail silently; reveal the fallback only after a generous load window.
-    elements.frame.addEventListener("load", () => {
-      if (elements.frame.src === "about:blank") return;
-      elements.fallback.hidden = true;
-    });
-    elements.reader.addEventListener("keydown", event => {
-      if (event.key !== "Tab") return;
-      const focusable = $$("a[href],button:not([disabled])", elements.reader).filter(node => !node.hidden);
-      if (!focusable.length) return;
-      const first = focusable[0], last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    });
-  }
-
-  function setupReveal() {
-    const nodes = $$(".reveal");
-    if (!("IntersectionObserver" in window) || state.reducedMotion) {
-      nodes.forEach(node => node.classList.add("is-visible"));
-      return;
-    }
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("is-visible");
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: .12 });
-    nodes.forEach(node => observer.observe(node));
-  }
-
-  function setupFooter() {
-    $("#currentYear").textContent = String(new Date().getFullYear());
-    window.addEventListener("online", () => loadCatalogue({ force: true }));
-    window.addEventListener("offline", () => setStatus("You are offline. Previously loaded books remain available if cached.", "error", true));
-  }
-
-  function init() {
-    setupTheme();
-    setupNavigation();
-    setupSearch();
-    setupAnimation();
-    setupReader();
-    setupReveal();
-    setupFooter();
-    elements.retry.addEventListener("click", () => loadCatalogue({ force: true }));
-    loadCatalogue();
-  }
-
-  document.addEventListener("DOMContentLoaded", init, { once: true });
+  requestAnimationFrame(frame);
 })();
+
+/* ---------------- RAIN IN THE WINDOW ---------------- */
+(() => {
+  const c = $('#rain'), ctx = c.getContext('2d');
+  let w = 0, h = 0, drops = [], beads = [], run = false, last = 0;
+  const mk = rand => { const z = Math.random(); return { x: Math.random() * (w + 40) - 20, y: rand ? Math.random() * h : -20, z, len: 8 + z * 18, sp: 260 + z * 620, a: 0.12 + z * 0.4 }; };
+  const mkBead = () => ({ x: Math.random() * w, y: Math.random() * h, r: 1 + Math.random() * 2, v: 0, wait: Math.random() * 4, t: 0, tr: 0 });
+  function size() {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    w = c.clientWidth; h = c.clientHeight; if (!w) return;
+    c.width = w * dpr; c.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drops = Array.from({ length: Math.round(w * h / 2600) }, () => mk(true));
+    beads = Array.from({ length: 10 }, mkBead);
+  }
+  function step(now) {
+    if (!run) return;
+    const dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
+    ctx.clearRect(0, 0, w, h); ctx.lineCap = 'round';
+    const wind = 0.18;
+    for (const d of drops) {
+      d.y += d.sp * dt; d.x -= d.sp * dt * wind;
+      if (d.y > h + 20 || d.x < -30) Object.assign(d, mk(false));
+      ctx.strokeStyle = `rgba(170,205,255,${d.a})`; ctx.lineWidth = 0.6 + d.z * 1.1;
+      ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + d.len * wind, d.y - d.len); ctx.stroke();
+    }
+    for (const b of beads) {            // drops sliding down the glass
+      if (b.wait > 0) b.wait -= dt;
+      else {
+        b.v = Math.min(b.v + 120 * dt, 90); b.y += b.v * dt; b.tr = Math.min(b.tr + b.v * dt, 40); b.t -= dt;
+        if (b.t <= 0) { b.wait = 1 + Math.random() * 4; b.t = 0.3 + Math.random() * 0.8; b.v = 0; }
+        if (b.y > h + 8) Object.assign(b, mkBead(), { y: -4 });
+      }
+      ctx.strokeStyle = 'rgba(190,220,255,.10)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y - b.tr); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.fillStyle = 'rgba(200,225,255,.35)'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.283); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.35, 0, 6.283); ctx.fill();
+    }
+    if (!reduceMotion) requestAnimationFrame(step);
+  }
+  new ResizeObserver(size).observe(c);
+  new IntersectionObserver(([e]) => {      // only animate while the window is on screen
+    run = e.isIntersecting;
+    if (run) { last = performance.now(); requestAnimationFrame(step); }
+  }).observe(c);
+})();
+
+/* ---------------- LIBRARY (reads your GitHub repo) ---------------- */
+const shelves = $('#shelves'), countEl = $('#count');
+const PALETTE = [['#7b2d26','#4a1512'],['#1f4a3d','#0f2a22'],['#23375f','#111d38'],['#5b3a1e','#33200f'],
+                 ['#4b2a56','#291432'],['#8a6a1f','#4f3a0c'],['#2f4f56','#152b30'],['#5a2e3a','#321620']];
+const hash = s => { let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+const enc = p => p.split('/').map(encodeURIComponent).join('/');
+const natural = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+const fmtSize = n => !n ? '' : n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+const label = s => s.replace(/^\d+[\s._-]+/, '').replace(/_+/g, ' ').trim();   // "01_Physics" -> "Physics"
+
+function repoInfo() {
+  let owner = CFG.owner, repo = CFG.repo;
+  if (!owner && location.hostname.endsWith('.github.io')) owner = location.hostname.split('.')[0];
+  if (!repo) {
+    const seg = location.pathname.split('/').filter(Boolean)[0];
+    repo = seg && !seg.includes('.') ? seg : (owner ? owner + '.github.io' : '');
+  }
+  return { owner, repo };
+}
+async function loadTree() {
+  const { owner, repo } = repoInfo();
+  if (!owner || !repo) throw new Error('config');
+  let status = 0;
+  for (const br of (CFG.branch ? [CFG.branch] : ['main', 'master'])) {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${br}?recursive=1`, { cache: 'no-store' });
+    if (res.ok) return (await res.json()).tree;
+    status = res.status;
+    if (status === 403 || status === 429) break;
+  }
+  throw new Error('api' + status);
+}
+function parseTree(tree) {
+  const root = CFG.folder.replace(/^\/+|\/+$/g, '') + '/';
+  const files = tree.filter(t => t.type === 'blob' && t.path.startsWith(root));
+  const covers = new Map();
+  files.forEach(f => { if (/\.(jpe?g|png|webp)$/i.test(f.path)) covers.set(f.path.replace(/\.[^./]+$/, '').toLowerCase(), f.path); });
+  return files.filter(f => /\.pdf$/i.test(f.path)).map(f => {
+    const parts = f.path.slice(root.length).split('/'), file = parts.pop();
+    const rawCat = parts.join('/') , cover = covers.get(f.path.replace(/\.pdf$/i, '').toLowerCase());
+    return {
+      title: file.replace(/\.pdf$/i, '').replace(/_+/g, ' ').replace(/\s+/g, ' ').trim(),
+      file, rawCat, cat: rawCat ? rawCat.split('/').map(label).join(' › ') : 'General',
+      url: enc(f.path), cover: cover ? enc(cover) : '', size: f.size
+    };
+  });
+}
+
+function bookEl(b, tag) {
+  const h = hash(b.title), [c1, c2] = PALETTE[h % PALETTE.length];
+  const e = document.createElement(tag);
+  e.className = 'book' + (tag === 'div' ? ' static' : '') + (b.cover ? ' has-img' : '');
+  e.style.setProperty('--c1', c1); e.style.setProperty('--c2', c2);
+  if (tag === 'button') { e.style.setProperty('--w', (0.9 + ((h >> 3) % 11) / 100).toFixed(2)); e.type = 'button'; e.setAttribute('aria-label', 'Open ' + b.title); }
+  e.innerHTML = '<span class="spine"></span><span class="cover"><b class="cover-title"></b><i class="cover-cat"></i></span><span class="edge"></span>';
+  e.querySelector('.cover-title').textContent = b.title;
+  e.querySelector('.cover-cat').textContent = b.cat;
+  if (b.cover) e.querySelector('.cover').style.backgroundImage = `url("${b.cover}")`;
+  return e;
+}
+function makeCase(name, minRows) {
+  const sec = document.createElement('section');
+  sec.className = 'case wood'; sec.setAttribute('aria-label', name);
+  const p = document.createElement('div'); p.className = 'plaque'; p.textContent = name;
+  const g = document.createElement('div'); g.className = 'case-grid'; g.dataset.minRows = minRows || 1;
+  sec.append(p, g); return { sec, g };
+}
+function padCases() {   // fill the remaining cubbies of each row with empty ones
+  document.querySelectorAll('.case-grid').forEach(g => {
+    g.querySelectorAll('.cubby.empty').forEach(n => n.remove());
+    const cols = getComputedStyle(g).gridTemplateColumns.split(' ').length || 1, n = g.children.length;
+    const rows = Math.max(+g.dataset.minRows || 1, Math.ceil(n / cols));
+    for (let i = 0; i < rows * cols - n; i++) { const d = document.createElement('div'); d.className = 'cubby empty'; g.append(d); }
+  });
+}
+function render(books) {
+  shelves.innerHTML = '';
+  if (!books.length) {
+    const { sec } = makeCase('Coming soon', 2); shelves.append(sec);
+    countEl.textContent = 'The shelves are being stocked'; padCases(); return;
+  }
+  const groups = new Map();
+  books.forEach(b => { if (!groups.has(b.rawCat)) groups.set(b.rawCat, []); groups.get(b.rawCat).push(b); });
+  [...groups.keys()].sort(natural).forEach(k => {
+    const list = groups.get(k).sort((a, b) => natural(a.title, b.title));
+    const { sec, g } = makeCase(list[0].cat);
+    list.forEach(b => {
+      const cub = document.createElement('div'); cub.className = 'cubby';
+      const el = bookEl(b, 'button'); el.addEventListener('click', () => openModal(b));
+      cub.append(el); g.append(cub);
+    });
+    shelves.append(sec);
+  });
+  countEl.textContent = `${books.length} ${books.length === 1 ? 'book' : 'books'} · ${groups.size} ${groups.size === 1 ? 'shelf' : 'shelves'}`;
+  padCases();
+}
+function note(msg) { shelves.innerHTML = ''; const p = document.createElement('p'); p.className = 'status'; p.textContent = msg; shelves.append(p); }
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(padCases, 150); });
+
+(async function init() {
+  try {
+    const books = parseTree(await loadTree());
+    try { localStorage.setItem('stemAtlasBooks', JSON.stringify(books)); } catch (e) {}
+    render(books);
+  } catch (err) {
+    let cached = null; try { cached = JSON.parse(localStorage.getItem('stemAtlasBooks')); } catch (e) {}
+    if (cached && cached.length) { render(cached); return; }
+    note(err.message === 'config'
+      ? 'Open this site from its GitHub Pages address (or set owner and repo at the top of script.js) so the library knows where your books are.'
+      : /api40[39]|api429/.test(err.message)
+        ? 'GitHub is limiting requests right now. Please try again in a few minutes.'
+        : 'The shelves could not be loaded. Check your connection and refresh.');
+  }
+})();
+
+/* ---------------- BOOK POP-UP ---------------- */
+const modal = $('#bookModal');
+function openModal(b) {
+  $('#mTitle').textContent = b.title; $('#mCat').textContent = b.cat;
+  $('#mSize').textContent = [fmtSize(b.size), 'PDF'].filter(Boolean).join(' · ');
+  $('#mBook').replaceChildren(bookEl(b, 'div'));
+  const dl = $('#mDownload'); dl.href = b.url; dl.setAttribute('download', b.file);
+  $('#mRead').onclick = () => { closeModal(); openReader(b); };
+  modal.hidden = false; $('#mRead').focus();
+}
+function closeModal() { modal.hidden = true; }
+modal.addEventListener('click', e => { if (e.target === modal || e.target.hasAttribute('data-close')) closeModal(); });
+
+/* ---------------- IN-BROWSER READER (PDF.js, no download prompt) ---------------- */
+const reader = $('#reader'), rScroll = $('#rScroll'), rPages = $('#rPages'), rMsg = $('#rMsg'), rPage = $('#rPage');
+const R = { pdf: null, pages: [], zoom: 1, w: 0, ratio: 1.4, token: 0 };
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+function setMsg(text, book) {
+  rMsg.textContent = text || '';
+  if (book) { rMsg.append(' '); const a = document.createElement('a'); a.href = book.url; a.setAttribute('download', book.file); a.textContent = 'Download the PDF'; rMsg.append(a); }
+}
+function layout() {
+  R.w = Math.max(220, Math.min(rScroll.clientWidth - 24, 980)) * R.zoom;
+  for (const p of R.pages) { p.el.style.width = R.w + 'px'; p.el.style.height = (R.w * (p.ratio || R.ratio)) + 'px'; }
+}
+const keyNow = () => Math.round(R.w) + '@' + (devicePixelRatio || 1);
+async function drawPage(p, num) {
+  const key = keyNow(); if (p.key === key || p.busy === key) return;
+  p.busy = key; const token = R.token;
+  try {
+    const page = await R.pdf.getPage(num); if (token !== R.token) return;
+    const v1 = page.getViewport({ scale: 1 }); p.ratio = v1.height / v1.width;
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const scale = Math.min(R.w / v1.width * dpr, 3600 / v1.width), vp = page.getViewport({ scale });
+    const c = document.createElement('canvas'); c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+    await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+    if (token !== R.token || key !== keyNow()) return;
+    p.el.replaceChild(c, p.canvas); p.canvas = c; p.key = key;
+    p.el.style.height = (R.w * p.ratio) + 'px';
+  } catch (e) { /* page skipped */ } finally { if (p.busy === key) p.busy = ''; }
+}
+function renderVisible() {
+  if (!R.pdf) return;
+  const top = rScroll.scrollTop, h = rScroll.clientHeight;
+  R.pages.forEach((p, i) => {
+    const y = p.el.offsetTop, b = y + p.el.offsetHeight;
+    if (b > top - h && y < top + 2 * h) drawPage(p, i + 1);
+    else if (p.key && (b < top - 4 * h || y > top + 5 * h)) { p.canvas.width = 1; p.canvas.height = 1; p.key = ''; }  // free memory
+  });
+}
+function updateCurrent() {
+  if (!R.pages.length) return;
+  const mid = rScroll.scrollTop + rScroll.clientHeight * 0.35; let cur = 1;
+  for (let i = 0; i < R.pages.length; i++) { if (R.pages[i].el.offsetTop <= mid) cur = i + 1; else break; }
+  rPage.textContent = cur + ' / ' + R.pages.length;
+}
+function setZoom(z) {
+  z = Math.min(3, Math.max(0.5, z)); if (z === R.zoom || !R.pdf) return;
+  const ratio = rScroll.scrollTop / (rScroll.scrollHeight || 1);
+  R.zoom = z; layout(); rScroll.scrollTop = ratio * rScroll.scrollHeight; renderVisible(); updateCurrent();
+}
+async function openReader(b) {
+  const token = ++R.token;
+  rPages.innerHTML = ''; R.pages = []; R.zoom = 1; R.pdf = null; rPage.textContent = '';
+  $('#rTitle').textContent = b.title;
+  const dl = $('#rDownload'); dl.href = b.url; dl.setAttribute('download', b.file);
+  setMsg('Opening book…'); reader.hidden = false; document.body.classList.add('lock'); rScroll.scrollTop = 0;
+  history.pushState({ reader: true }, '');
+  try {
+    const task = pdfjsLib.getDocument({ url: b.url, isEvalSupported: false });
+    task.onProgress = p => { if (token === R.token && p.total) setMsg('Opening book… ' + Math.round(p.loaded / p.total * 100) + '%'); };
+    const pdf = await task.promise;
+    if (token !== R.token) { pdf.destroy(); return; }
+    R.pdf = pdf;
+    const v = (await pdf.getPage(1)).getViewport({ scale: 1 }); R.ratio = v.height / v.width;
+    for (let i = 0; i < pdf.numPages; i++) {
+      const el = document.createElement('div'); el.className = 'page';
+      const canvas = document.createElement('canvas'); el.append(canvas); rPages.append(el);
+      R.pages.push({ el, canvas, key: '', busy: '', ratio: 0 });
+    }
+    setMsg(''); layout(); renderVisible(); updateCurrent();
+  } catch (e) {
+    if (token === R.token) setMsg('Sorry, this book could not be opened here.', b);
+  }
+}
+function hideReader() {
+  R.token++; if (R.pdf) { R.pdf.destroy(); R.pdf = null; }
+  R.pages = []; rPages.innerHTML = ''; reader.hidden = true; document.body.classList.remove('lock');
+}
+function closeReader() { history.state && history.state.reader ? history.back() : hideReader(); }
+addEventListener('popstate', () => { if (!reader.hidden) hideReader(); });
+$('#rClose').onclick = closeReader;
+$('#rIn').onclick = () => setZoom(R.zoom + 0.25);
+$('#rOut').onclick = () => setZoom(R.zoom - 0.25);
+let tick = false;
+rScroll.addEventListener('scroll', () => {
+  if (tick) return; tick = true;
+  requestAnimationFrame(() => { tick = false; renderVisible(); updateCurrent(); });
+}, { passive: true });
+addEventListener('resize', () => { if (!reader.hidden && R.pdf) { layout(); renderVisible(); } });
+addEventListener('keydown', e => { if (e.key === 'Escape') { if (!reader.hidden) closeReader(); else if (!modal.hidden) closeModal(); } });
