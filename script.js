@@ -364,7 +364,8 @@ addEventListener('resize', () => { if (!reader.hidden && R.pdf) { layout(); rend
 addEventListener('keydown', e => { if (e.key === 'Escape') { if (!reader.hidden) closeReader(); else if (!modal.hidden) closeModal(); } });
 /* ---------------- VIDEO BEFORE READ / DOWNLOAD ---------------- */
 (() => {
-  const VIDEO_SRC = 'intro.mp4';   // file name of your video (same folder as index.html)
+  const VIDEO_SRC = 'intro.mp4';
+  const VIDEO_VERSION = 2;         // change this number whenever you replace intro.mp4
   const FADE_OUT_MS = 1400;        // website slowly fades to black
   const FADE_IN_MS = 250;          // video fades in fast
 
@@ -372,50 +373,77 @@ addEventListener('keydown', e => { if (e.key === 'Escape') { if (!reader.hidden)
     #vidLayer{position:fixed;inset:0;z-index:300;background:#000;opacity:0}
     #vidLayer video{width:100%;height:100%;object-fit:contain;background:#000;opacity:0;transition:opacity ${FADE_IN_MS}ms ease}
     #vidLayer.show video{opacity:1}
-    .vid-skip{position:absolute;top:max(16px,env(safe-area-inset-top));right:16px;z-index:2;min-height:48px;padding:0 26px;border-radius:999px;border:2px solid #fff;background:rgba(0,0,0,.7);color:#fff;font:700 .9rem Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;opacity:0;transition:opacity ${FADE_IN_MS}ms ease}
-    #vidLayer.show .vid-skip{opacity:1}
-    .vid-skip:hover{background:#fff;color:#000}
+    .vid-skip{position:absolute;top:max(16px,env(safe-area-inset-top));right:16px;z-index:3;min-height:48px;padding:0 26px;border-radius:999px;border:2px solid #fff;background:rgba(0,0,0,.7);color:#fff;font:700 .9rem Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;opacity:0;transition:opacity ${FADE_IN_MS}ms ease}
+    #vidLayer.show .vid-skip,#vidLayer.msg .vid-skip{opacity:1}
+    #vidMsg{position:absolute;inset:0;z-index:2;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:24px;text-align:center;color:#fff;font:600 1.05rem Inter,sans-serif}
+    #vidLayer.msg #vidMsg{display:flex}
+    .vid-play{min-height:56px;padding:0 34px;border-radius:999px;border:0;background:#e6b865;color:#24150a;font:700 1rem Inter,sans-serif;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
   </style>`);
 
   const layer = document.createElement('div');
   layer.id = 'vidLayer'; layer.hidden = true;
   const vid = document.createElement('video');
-  vid.src = VIDEO_SRC; vid.preload = 'auto'; vid.playsInline = true;
-  vid.setAttribute('playsinline', '');
+  vid.src = VIDEO_SRC + '?v=' + VIDEO_VERSION;
+  vid.preload = 'auto'; vid.playsInline = true; vid.setAttribute('playsinline', '');
+  const msg = document.createElement('div'); msg.id = 'vidMsg';
+  const msgText = document.createElement('span');
+  const playBtn = document.createElement('button');
+  playBtn.type = 'button'; playBtn.className = 'vid-play'; playBtn.textContent = '▶ Play'; playBtn.hidden = true;
+  msg.append(msgText, playBtn);
   const skip = document.createElement('button');
   skip.type = 'button'; skip.className = 'vid-skip'; skip.textContent = 'Skip ›';
-  layer.append(vid, skip);
+  layer.append(vid, msg, skip);
   document.body.append(layer);
 
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const fade = (o, ms) => { layer.style.transition = `opacity ${ms}ms ease`; layer.style.opacity = o; };
   let busy = false, bypass = false, finishVideo = null;
 
+  async function tryPlay() {
+    if (vid.error) vid.load();
+    for (const muted of [false, true]) {
+      vid.muted = muted;
+      try { await vid.play(); return 'ok'; } catch (e) {}
+    }
+    return vid.error ? 'error' : 'blocked';
+  }
+
   async function playThen(action) {
     if (busy) return; busy = true;
-    layer.hidden = false; layer.classList.remove('show');
+    layer.hidden = false; layer.classList.remove('show', 'msg');
     try { vid.currentTime = 0; } catch (e) {}
     void layer.offsetWidth;
     fade(1, FADE_OUT_MS);                       // 1) website fades out slowly
     await wait(FADE_OUT_MS);
 
-    let ok = true;                              // 2) video starts and fades in fast
-    try { vid.muted = false; await vid.play(); }
-    catch (e) { try { vid.muted = true; await vid.play(); } catch (e2) { ok = false; } }
-    if (ok) {
+    const state = await tryPlay();              // 2) video starts and fades in fast
+    const done = new Promise(res => { finishVideo = res; });
+    if (state === 'ok') {
       layer.classList.add('show');
-      await new Promise(res => { finishVideo = res; });
+    } else if (state === 'blocked') {
+      msgText.textContent = 'Tap to play the intro';
+      playBtn.hidden = false; layer.classList.add('msg');
+    } else {
+      msgText.textContent = "The video couldn't be played" + (vid.error ? ' (error ' + vid.error.code + ')' : '') + '. Opening your book…';
+      playBtn.hidden = true; layer.classList.add('msg');
+      setTimeout(() => finishVideo && finishVideo(), 2500);
     }
-    vid.pause(); layer.classList.remove('show');
+    await done;
+    finishVideo = null;
+    vid.pause(); layer.classList.remove('show', 'msg'); playBtn.hidden = true;
 
     action();                                   // 3) now the book opens / downloads
     fade(0, 500); await wait(500);
     layer.hidden = true; busy = false;
   }
 
+  playBtn.addEventListener('click', async () => {
+    const s = await tryPlay();
+    if (s === 'ok') { playBtn.hidden = true; layer.classList.remove('msg'); layer.classList.add('show'); }
+    else { msgText.textContent = "The video couldn't be played. Tap Skip to continue."; playBtn.hidden = true; }
+  });
   skip.addEventListener('click', () => finishVideo && finishVideo());
   vid.addEventListener('ended', () => finishVideo && finishVideo());
-  vid.addEventListener('error', () => finishVideo && finishVideo());
 
   document.addEventListener('click', e => {
     if (bypass) return;
