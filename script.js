@@ -88,50 +88,62 @@ const lamps = [...document.querySelectorAll('.lantern')].map((el, i) => ({
   }
   requestAnimationFrame(frame);
 })();
-
 /* ---------------- RAIN IN THE WINDOW ---------------- */
 (() => {
-  const c = $('#rain'), ctx = c.getContext('2d');
-  let w = 0, h = 0, drops = [], beads = [], run = false, last = 0;
-  const mk = rand => { const z = Math.random(); return { x: Math.random() * (w + 40) - 20, y: rand ? Math.random() * h : -20, z, len: 8 + z * 18, sp: 260 + z * 620, a: 0.12 + z * 0.4 }; };
-  const mkBead = () => ({ x: Math.random() * w, y: Math.random() * h, r: 1 + Math.random() * 2, v: 0, wait: Math.random() * 4, t: 0, tr: 0 });
+  const c = $('#rain'), ctx = c.getContext('2d'), btn = $('#rainBtn');
+  const WIND = 0.38;                       // higher = more diagonal
+  let w = 0, h = 0, drops = [], splashes = [], on = true, visible = false, raf = 0, last = 0;
+  try { if (localStorage.getItem('stemAtlasRain') === 'off') on = false; } catch (e) {}
+
+  const make = anywhere => {
+    const z = Math.random();               // z = how close the drop is (0 far, 1 near)
+    return { x: Math.random() * (w + h * WIND), y: anywhere ? Math.random() * h : -50,
+             z, len: 16 + z * 30, sp: 520 + z * 700, a: 0.28 + z * 0.6, lw: 0.8 + z * 1.5 };
+  };
   function size() {
     const dpr = Math.min(devicePixelRatio || 1, 2);
     w = c.clientWidth; h = c.clientHeight; if (!w) return;
     c.width = w * dpr; c.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    drops = Array.from({ length: Math.round(w * h / 2600) }, () => mk(true));
-    beads = Array.from({ length: 10 }, mkBead);
+    const n = Math.min(400, Math.max(90, Math.round(w * h / 1500)));
+    drops = Array.from({ length: n }, () => make(true));
   }
   function step(now) {
-    if (!run) return;
+    raf = 0; if (!on || !visible) return;
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
     ctx.clearRect(0, 0, w, h); ctx.lineCap = 'round';
-    const wind = 0.18;
     for (const d of drops) {
-      d.y += d.sp * dt; d.x -= d.sp * dt * wind;
-      if (d.y > h + 20 || d.x < -30) Object.assign(d, mk(false));
-      ctx.strokeStyle = `rgba(170,205,255,${d.a})`; ctx.lineWidth = 0.6 + d.z * 1.1;
-      ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + d.len * wind, d.y - d.len); ctx.stroke();
-    }
-    for (const b of beads) {            // drops sliding down the glass
-      if (b.wait > 0) b.wait -= dt;
-      else {
-        b.v = Math.min(b.v + 120 * dt, 90); b.y += b.v * dt; b.tr = Math.min(b.tr + b.v * dt, 40); b.t -= dt;
-        if (b.t <= 0) { b.wait = 1 + Math.random() * 4; b.t = 0.3 + Math.random() * 0.8; b.v = 0; }
-        if (b.y > h + 8) Object.assign(b, mkBead(), { y: -4 });
+      d.y += d.sp * dt; d.x -= d.sp * dt * WIND;
+      if (d.y > h - 4) {                   // hit the bottom: tiny splash, then respawn at the top
+        if (d.x > 0 && d.x < w && d.z > 0.35) splashes.push({ x: d.x, y: h - 3, t: 0, r: 2 + d.z * 4 });
+        Object.assign(d, make(false)); continue;
       }
-      ctx.strokeStyle = 'rgba(190,220,255,.10)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(b.x, b.y - b.tr); ctx.lineTo(b.x, b.y); ctx.stroke();
-      ctx.fillStyle = 'rgba(200,225,255,.35)'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.283); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.35, 0, 6.283); ctx.fill();
+      ctx.strokeStyle = `rgba(195,222,255,${d.a})`; ctx.lineWidth = d.lw;
+      ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + d.len * WIND, d.y - d.len); ctx.stroke();
     }
-    if (!reduceMotion) requestAnimationFrame(step);
+    for (let i = splashes.length - 1; i >= 0; i--) {
+      const s = splashes[i]; s.t += dt * 3.2;
+      if (s.t >= 1) { splashes.splice(i, 1); continue; }
+      ctx.strokeStyle = `rgba(200,225,255,${0.5 * (1 - s.t)})`; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r * (0.4 + s.t * 1.6), s.r * 0.35 * (0.4 + s.t), 0, 0, 6.283); ctx.stroke();
+    }
+    raf = requestAnimationFrame(step);
   }
+  const start = () => { if (!raf && on && visible) { last = performance.now(); raf = requestAnimationFrame(step); } };
+  const stop = () => { cancelAnimationFrame(raf); raf = 0; ctx.clearRect(0, 0, w, h); splashes = []; };
+  function setOn(v) {
+    on = v; btn.setAttribute('aria-pressed', String(v));
+    btn.querySelector('.rb-text').textContent = v ? 'Rain: On' : 'Rain: Off';
+    btn.classList.toggle('off', !v);
+    try { localStorage.setItem('stemAtlasRain', v ? 'on' : 'off'); } catch (e) {}
+    v ? start() : stop();
+  }
+  btn.addEventListener('click', () => setOn(!on));
   new ResizeObserver(size).observe(c);
   new IntersectionObserver(([e]) => {      // only animate while the window is on screen
-    run = e.isIntersecting;
-    if (run) { last = performance.now(); requestAnimationFrame(step); }
+    visible = e.isIntersecting;
+    visible ? start() : (cancelAnimationFrame(raf), raf = 0);
   }).observe(c);
+  setOn(on);
 })();
 
 /* ---------------- LIBRARY (reads your GitHub repo) ---------------- */
