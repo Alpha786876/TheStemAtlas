@@ -453,3 +453,29 @@ addEventListener('keydown', e => { if (e.key === 'Escape') { if (!reader.hidden)
     playThen(() => { bypass = true; t.click(); bypass = false; });
   }, true);
 })();
+/* ---------------- ULTIMATE VIDEO LOADER (add-on) ---------------- */
+(() => {
+  const vid = document.querySelector('#vidLayer video');
+  if (!vid) return;
+  const NAMES = ['intro.mp4', 'intro.webm', 'intro.mov', 'intro.m4v'];
+  let i = 0;
+  vid.removeAttribute('src'); vid.load();          // drop the old fixed address
+
+  async function fingerprint(name) {
+    try {
+      const r = await fetch(name, { method: 'HEAD', cache: 'no-store' });
+      if (!r.ok) return null;                      // file doesn't exist
+      return (r.headers.get('etag') || r.headers.get('last-modified') || r.headers.get('content-length') || '1')
+        .replace(/[^a-z0-9]/gi, '');
+    } catch (e) { return null; }
+  }
+  async function loadNext() {
+    while (i < NAMES.length) {
+      const name = NAMES[i++], v = await fingerprint(name);
+      if (v === null) continue;                    // try the next format
+      vid.src = name + '?v=' + v; vid.load(); return;
+    }
+  }
+  vid.addEventListener('error', () => { if (vid.getAttribute('src') && i < NAMES.length) loadNext(); });
+  loadNext();
+})();
