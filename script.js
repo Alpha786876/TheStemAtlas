@@ -93,7 +93,7 @@ const lamps = [...document.querySelectorAll('.lantern')].map((el, i) => ({
   const c = $('#rain'), ctx = c.getContext('2d'), btn = $('#rainBtn');
   const WIND = 0.38;                       // higher = more diagonal
   let w = 0, h = 0, drops = [], splashes = [], on = true, visible = false, raf = 0, last = 0;
-  try { if (localStorage.getItem('stemAtlasRain') === 'off') on = false; } catch (e) {}
+  try { localStorage.removeItem('stemAtlasRain'); if (sessionStorage.getItem('stemAtlasRain') === 'off') on = false; } catch (e) {}
 
   const make = anywhere => {
     const z = Math.random();               // z = how close the drop is (0 far, 1 near)
@@ -134,7 +134,7 @@ const lamps = [...document.querySelectorAll('.lantern')].map((el, i) => ({
     on = v; btn.setAttribute('aria-pressed', String(v));
     btn.querySelector('.rb-text').textContent = v ? 'Rain: On' : 'Rain: Off';
     btn.classList.toggle('off', !v);
-    try { localStorage.setItem('stemAtlasRain', v ? 'on' : 'off'); } catch (e) {}
+    try { sessionStorage.setItem('stemAtlasRain', v ? 'on' : 'off'); } catch (e) {}
     v ? start() : stop();
   }
   btn.addEventListener('click', () => setOn(!on));
@@ -478,4 +478,40 @@ addEventListener('keydown', e => { if (e.key === 'Escape') { if (!reader.hidden)
   }
   vid.addEventListener('error', () => { if (vid.getAttribute('src') && i < NAMES.length) loadNext(); });
   loadNext();
+})();
+/* ---------------- READER BRIGHTNESS (add-on) ---------------- */
+(() => {
+  const pages = document.getElementById('rPages');
+  const zoomOut = document.getElementById('rOut');
+  if (!pages || !zoomOut) return;
+
+  const MIN = 0.4, MAX = 1.6, STEP = 0.1;   // 40% to 160%, 10% per tap
+  let level = 1;
+
+  document.head.insertAdjacentHTML('beforeend',
+    '<style>.rbtn.sun svg{width:20px;height:20px}.rbtn.sun:disabled{opacity:.35;cursor:default}</style>');
+
+  const rays = '<path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+  const filledSun = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.8" fill="currentColor"/>' + rays + '</svg>';
+  const hollowSun = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.8" fill="none" stroke="currentColor" stroke-width="2"/>' + rays + '</svg>';
+
+  const make = (html, label) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'rbtn sq sun';
+    b.innerHTML = html; b.title = label; b.setAttribute('aria-label', label);
+    return b;
+  };
+  const up = make(filledSun, 'Increase brightness');   // filled sun = brighter
+  const down = make(hollowSun, 'Decrease brightness'); // hollow sun = dimmer
+  zoomOut.before(up, down);
+
+  function apply() {
+    level = Math.round(Math.min(MAX, Math.max(MIN, level)) * 10) / 10;
+    pages.style.filter = 'brightness(' + level + ')';
+    up.disabled = level >= MAX;
+    down.disabled = level <= MIN;
+  }
+  up.addEventListener('click', () => { level += STEP; apply(); });
+  down.addEventListener('click', () => { level -= STEP; apply(); });
+  apply();
 })();
