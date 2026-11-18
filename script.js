@@ -371,7 +371,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape') { if (!reader.hidden)
 
   document.head.insertAdjacentHTML('beforeend', `<style>
     #vidLayer{position:fixed;inset:0;z-index:300;background:#000;opacity:0}
-    #vidLayer video{width:100%;height:100%;object-fit:contain;background:#000;opacity:0;transition:opacity ${FADE_IN_MS}ms ease}
+    #vidLayer video{width:100%;height:100%;object-fit:cover;pointer-events:none;background:#000;opacity:0;transition:opacity ${FADE_IN_MS}ms ease}
     #vidLayer.show video{opacity:1}
     .vid-skip{position:absolute;top:max(16px,env(safe-area-inset-top));right:16px;z-index:3;min-height:48px;padding:0 26px;border-radius:999px;border:2px solid #fff;background:rgba(0,0,0,.7);color:#fff;font:700 .9rem Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;opacity:0;transition:opacity ${FADE_IN_MS}ms ease}
     #vidLayer.show .vid-skip,#vidLayer.msg .vid-skip{opacity:1}
