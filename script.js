@@ -445,14 +445,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape') { if (!reader.hidden)
   skip.addEventListener('click', () => finishVideo && finishVideo());
   vid.addEventListener('ended', () => finishVideo && finishVideo());
 
-  document.addEventListener('click', e => {
-    if (bypass) return;
-    const t = e.target.closest('#mRead, #mDownload');
-    if (!t) return;
-    e.preventDefault(); e.stopImmediatePropagation();
-    playThen(() => { bypass = true; t.click(); bypass = false; });
-  }, true);
-})();
+ 
 /* ---------------- ULTIMATE VIDEO LOADER (add-on) ---------------- */
 (() => {
   const vid = document.querySelector('#vidLayer video');
