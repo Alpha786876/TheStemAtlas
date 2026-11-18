@@ -515,3 +515,88 @@ addEventListener('keydown', e => { if (e.key === 'Escape') { if (!reader.hidden)
   down.addEventListener('click', () => { level -= STEP; apply(); });
   apply();
 })();
+/* ---------------- BOOK RATINGS (add-on) ---------------- */
+(() => {
+  const DB_URL = 'PASTE_YOUR_FIREBASE_URL_HERE';   // e.g. https://stematlas-default-rtdb.firebaseio.com
+  const shelves = document.getElementById('shelves');
+  const base = DB_URL.replace(/\/+$/, '');
+  if (!shelves || !/^https:\/\//.test(base)) { console.warn('Ratings: set DB_URL first.'); return; }
+
+  let voter = '';
+  try {
+    voter = localStorage.getItem('stemAtlasVoter') || '';
+    if (!voter) { voter = Date.now().toString(36) + Math.random().toString(36).slice(2, 10); localStorage.setItem('stemAtlasVoter', voter); }
+  } catch (e) { voter = 'v' + Math.random().toString(36).slice(2, 12); }
+
+  let data = {}, loaded = false, failed = false;
+
+  /* A book is identified by its title, so the same file name in
+     several shelves counts as ONE book with ONE shared rating. */
+  const keyOf = t => {
+    const n = t.toLowerCase().replace(/\s+/g, ' ').trim();
+    let h = 0; for (const ch of n) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return (n.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'book') + '-' + h.toString(36);
+  };
+  const statsOf = key => {
+    const votes = data[key] || {}, list = Object.values(votes).filter(v => v >= 1 && v <= 5);
+    const sum = list.reduce((a, b) => a + b, 0);
+    return { count: list.length, avg: list.length ? sum / list.length : 0, mine: +votes[voter] || 0 };
+  };
+
+  function paint(el) {
+    const s = statsOf(el.dataset.key);
+    el.classList.toggle('locked', !!s.mine);
+    el.querySelectorAll('.rs').forEach(b => {
+      b.classList.remove('hov'); b.classList.toggle('on', +b.dataset.n <= s.mine);
+      b.title = s.mine ? 'You rated this ' + s.mine + ' / 5' : 'Rate ' + b.dataset.n + ' / 5';
+    });
+    const out = el.querySelector('.rate-avg');
+    if (failed) out.textContent = 'Ratings unavailable';
+    else if (!loaded) out.textContent = 'Loading…';
+    else if (!s.count) out.textContent = 'No ratings yet';
+    else out.innerHTML = '<b>' + s.avg.toFixed(1) + '</b>/ 5 · ' + s.count + (s.count === 1 ? ' rating' : ' ratings');
+  }
+  const paintAll = () => shelves.querySelectorAll('.rate').forEach(paint);
+
+  function build(cub) {
+    const t = cub.querySelector('.cover-title');
+    if (!t || cub.querySelector('.rate')) return;
+    const el = document.createElement('div');
+    el.className = 'rate'; el.dataset.key = keyOf(t.textContent);
+    el.innerHTML = '<div class="rate-stars" role="group" aria-label="Rate this book">' +
+      [1, 2, 3, 4, 5].map(n => '<button type="button" class="rs" data-n="' + n + '" aria-label="' + n + ' star' + (n > 1 ? 's' : '') + '">★</button>').join('') +
+      '</div><div class="rate-avg"></div>';
+    cub.append(el); paint(el);
+  }
+  const scan = () => shelves.querySelectorAll('.cubby:not(.empty)').forEach(build);
+  new MutationObserver(scan).observe(shelves, { childList: true, subtree: true });
+  scan();
+
+  shelves.addEventListener('mouseover', e => {
+    const s = e.target.closest('.rs'); if (!s) return;
+    const el = s.closest('.rate'); if (el.classList.contains('locked')) return;
+    el.querySelectorAll('.rs').forEach(b => b.classList.toggle('hov', +b.dataset.n <= +s.dataset.n));
+  });
+  shelves.addEventListener('mouseout', e => {
+    const el = e.target.closest('.rate'); if (el) el.querySelectorAll('.rs').forEach(b => b.classList.remove('hov'));
+  });
+  shelves.addEventListener('click', async e => {
+    const s = e.target.closest('.rs'); if (!s) return;
+    e.stopPropagation();
+    const el = s.closest('.rate'), key = el.dataset.key, n = +s.dataset.n;
+    if (!loaded) { alert('Ratings are still loading. Please try again in a moment.'); return; }
+    if (statsOf(key).mine) return;                                   // already rated this book
+    if (!confirm('Rate this book ' + n + (n === 1 ? ' star' : ' stars') + '? You can’t change it afterwards.')) return;
+    try {
+      const r = await fetch(base + '/ratings/' + key + '/' + voter + '.json', { method: 'PUT', body: JSON.stringify(n) });
+      if (!r.ok) throw new Error('save');
+      (data[key] = data[key] || {})[voter] = n;
+      shelves.querySelectorAll('.rate[data-key="' + key + '"]').forEach(paint);   // every shelf with this book updates
+    } catch (err) { alert('Sorry, your rating could not be saved. You may have already rated this book.'); }
+  });
+
+  fetch(base + '/ratings.json', { cache: 'no-store' })
+    .then(r => { if (!r.ok) throw new Error('load'); return r.json(); })
+    .then(j => { data = j || {}; loaded = true; paintAll(); })
+    .catch(() => { failed = true; paintAll(); });
+})();
