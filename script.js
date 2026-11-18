@@ -512,7 +512,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape') { if (!reader.hidden)
 })();
 /* ---------------- BOOK RATINGS (add-on) ---------------- */
 (() => {
-  const DB_URL = 'https://thestematlas-default-rtdb-asia-southeast1.firebase.app';   // e.g. https://stematlas-default-rtdb.firebaseio.com
+  const DB_URL = 'https://the-stem-atlas-default-rtdb.asia-southeast1.firebasedatabase.app';   // e.g. https://stematlas-default-rtdb.firebaseio.com
   const shelves = document.getElementById('shelves');
   const base = DB_URL.replace(/\/+$/, '');
   if (!shelves || !/^https:\/\//.test(base)) { console.warn('Ratings: set DB_URL first.'); return; }
