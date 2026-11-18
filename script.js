@@ -444,6 +444,8 @@ addEventListener('keydown', e => { if (e.key === 'Escape') { if (!reader.hidden)
   });
   skip.addEventListener('click', () => finishVideo && finishVideo());
   vid.addEventListener('ended', () => finishVideo && finishVideo());
+    
+})();
 
  
 /* ---------------- ULTIMATE VIDEO LOADER (add-on) ---------------- */
