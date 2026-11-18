@@ -1,8 +1,8 @@
 /* ================= STEM Atlas · script.js ================= */
 const CFG = {
   folder: 'books',  // folder in your GitHub repo that holds the PDFs
-  owner: '',        // leave '' to auto-detect from the website address
-  repo: '',         // leave '' to auto-detect
+  owner: 'Alpha786876',        // leave '' to auto-detect from the website address
+  repo: 'TheStemAtlas',         // leave '' to auto-detect
   branch: '',       // leave '' to try "main", then "master"
   ambient: 0.58     // 0 = fully lit room, 1 = pitch black (darkness far from the lanterns)
 };
