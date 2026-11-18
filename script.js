@@ -362,3 +362,66 @@ rScroll.addEventListener('scroll', () => {
 }, { passive: true });
 addEventListener('resize', () => { if (!reader.hidden && R.pdf) { layout(); renderVisible(); } });
 addEventListener('keydown', e => { if (e.key === 'Escape') { if (!reader.hidden) closeReader(); else if (!modal.hidden) closeModal(); } });
+/* ---------------- VIDEO BEFORE READ / DOWNLOAD ---------------- */
+(() => {
+  const VIDEO_SRC = 'intro.mp4';   // file name of your video (same folder as index.html)
+  const FADE_OUT_MS = 1400;        // website slowly fades to black
+  const FADE_IN_MS = 250;          // video fades in fast
+
+  document.head.insertAdjacentHTML('beforeend', `<style>
+    #vidLayer{position:fixed;inset:0;z-index:300;background:#000;opacity:0}
+    #vidLayer video{width:100%;height:100%;object-fit:contain;background:#000;opacity:0;transition:opacity ${FADE_IN_MS}ms ease}
+    #vidLayer.show video{opacity:1}
+    .vid-skip{position:absolute;top:max(16px,env(safe-area-inset-top));right:16px;z-index:2;min-height:48px;padding:0 26px;border-radius:999px;border:2px solid #fff;background:rgba(0,0,0,.7);color:#fff;font:700 .9rem Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;opacity:0;transition:opacity ${FADE_IN_MS}ms ease}
+    #vidLayer.show .vid-skip{opacity:1}
+    .vid-skip:hover{background:#fff;color:#000}
+  </style>`);
+
+  const layer = document.createElement('div');
+  layer.id = 'vidLayer'; layer.hidden = true;
+  const vid = document.createElement('video');
+  vid.src = VIDEO_SRC; vid.preload = 'auto'; vid.playsInline = true;
+  vid.setAttribute('playsinline', '');
+  const skip = document.createElement('button');
+  skip.type = 'button'; skip.className = 'vid-skip'; skip.textContent = 'Skip ›';
+  layer.append(vid, skip);
+  document.body.append(layer);
+
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const fade = (o, ms) => { layer.style.transition = `opacity ${ms}ms ease`; layer.style.opacity = o; };
+  let busy = false, bypass = false, finishVideo = null;
+
+  async function playThen(action) {
+    if (busy) return; busy = true;
+    layer.hidden = false; layer.classList.remove('show');
+    try { vid.currentTime = 0; } catch (e) {}
+    void layer.offsetWidth;
+    fade(1, FADE_OUT_MS);                       // 1) website fades out slowly
+    await wait(FADE_OUT_MS);
+
+    let ok = true;                              // 2) video starts and fades in fast
+    try { vid.muted = false; await vid.play(); }
+    catch (e) { try { vid.muted = true; await vid.play(); } catch (e2) { ok = false; } }
+    if (ok) {
+      layer.classList.add('show');
+      await new Promise(res => { finishVideo = res; });
+    }
+    vid.pause(); layer.classList.remove('show');
+
+    action();                                   // 3) now the book opens / downloads
+    fade(0, 500); await wait(500);
+    layer.hidden = true; busy = false;
+  }
+
+  skip.addEventListener('click', () => finishVideo && finishVideo());
+  vid.addEventListener('ended', () => finishVideo && finishVideo());
+  vid.addEventListener('error', () => finishVideo && finishVideo());
+
+  document.addEventListener('click', e => {
+    if (bypass) return;
+    const t = e.target.closest('#mRead, #mDownload');
+    if (!t) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    playThen(() => { bypass = true; t.click(); bypass = false; });
+  }, true);
+})();
