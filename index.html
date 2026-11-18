@@ -131,7 +131,15 @@
   <div class="reader-msg" id="rMsg"></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
-<script src="script.js?v=3" defer></script>
+<script>
+(function () {
+  var v = Date.now();
+  ['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'script.js?v=' + v].forEach(function (src) {
+    var s = document.createElement('script');
+    s.src = src; s.async = false;   // keeps the load order
+    document.body.appendChild(s);
+  });
+})();
+</script>
 </body>
 </html>
