@@ -10,6 +10,58 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script>document.write('<link rel="stylesheet" href="style.css?v=' + Date.now() + '">');</script>
+
+<!-- ===== NEW: styles for author section, QR cards and calculator (all prefixed "sa-" so nothing existing is touched) ===== -->
+<style id="sa-additions">
+/* guide + author sections reuse your own .about / .section-head / .eyebrow / .lead / .btn classes */
+.sa-guide{max-width:760px;margin:0 auto;text-align:left}
+.sa-guide h3{margin:22px 0 8px}
+.sa-guide ol{line-height:1.8;padding-left:1.2em;margin:0 0 18px;opacity:.85}
+.sa-guide li{margin-bottom:6px}
+.sa-guide kbd{background:rgba(255,255,255,.08);border:1px solid rgba(217,165,102,.3);border-radius:5px;padding:1px 6px;font-size:.85em;font-family:inherit}
+.sa-center{text-align:center;margin-top:22px}
+
+/* author text block */
+.sa-author-text{max-width:760px;margin:0 auto}
+.sa-author-text p{line-height:1.8;margin:0 0 16px}
+.sa-connect{text-align:center;margin-top:34px}
+
+/* QR cards */
+.sa-qr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;max-width:640px;margin:22px auto 0}
+.sa-qr-card{background:rgba(255,255,255,.04);border:1px solid rgba(217,165,102,.28);border-radius:16px;padding:22px;text-align:center}
+.sa-qr-card h3{margin:0 0 14px}
+.sa-qr-card img{width:100%;max-width:200px;aspect-ratio:1/1;object-fit:contain;background:#fff;padding:10px;border-radius:12px;display:block;margin:0 auto 16px}
+.sa-qr-ph{width:100%;max-width:200px;aspect-ratio:1/1;margin:0 auto 16px;border:2px dashed rgba(217,165,102,.35);border-radius:12px;display:flex;align-items:center;justify-content:center;padding:12px;font-size:.82rem;opacity:.7}
+
+/* wood texture (own class, separate from your .wood) */
+.sa-wood{background:
+  repeating-linear-gradient(92deg,rgba(0,0,0,0) 0 7px,rgba(0,0,0,.09) 7px 8px,rgba(255,255,255,.025) 8px 13px),
+  linear-gradient(135deg,#8c5c30,#6a4120 55%,#7c4e26)}
+
+/* floating calculator button */
+.sa-calc-fab{position:fixed;right:14px;top:96px;z-index:900;width:58px;height:58px;border-radius:12px;border:2px solid #3b2410;cursor:pointer;color:#f6e7cf;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25);font-family:inherit;font-size:.6rem;letter-spacing:.12em;padding:0}
+.sa-calc-fab:hover{filter:brightness(1.12);transform:translateY(-2px)}
+.sa-calc-fab svg{width:26px;height:26px}
+
+/* calculator popup */
+.sa-calc-overlay{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:12px;overflow-y:auto}
+.sa-calc-overlay.open{display:flex}
+.sa-calc{width:100%;max-width:360px;border-radius:20px;padding:16px;border:3px solid #3b2410;box-shadow:0 20px 50px rgba(0,0,0,.65),inset 0 2px 0 rgba(255,255,255,.2);font-family:inherit}
+.sa-calc-top{display:flex;justify-content:space-between;align-items:center;color:#f6e7cf;margin-bottom:10px;font-size:.8rem;letter-spacing:.15em;text-transform:uppercase}
+.sa-calc-close{background:rgba(0,0,0,.3);border:1px solid #3b2410;color:#f6e7cf;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1rem}
+.sa-calc-screen{background:#17100a;border:3px solid #3b2410;border-radius:10px;padding:10px 14px;margin-bottom:14px;text-align:right;box-shadow:inset 0 3px 8px rgba(0,0,0,.8);min-height:84px;display:flex;flex-direction:column;justify-content:flex-end}
+.sa-calc-hist{color:#8d7550;font-size:.8rem;min-height:1.1em;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:ui-monospace,Menlo,Consolas,monospace}
+.sa-calc-disp{color:#f3c97a;font-size:1.7rem;font-family:ui-monospace,Menlo,Consolas,monospace;overflow-x:auto;white-space:nowrap}
+.sa-calc-mode{font-size:.65rem;color:#c98f47;text-align:left;letter-spacing:.15em;font-family:ui-monospace,Menlo,Consolas,monospace}
+.sa-keys{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.sa-keys button{font-family:inherit;font-size:.95rem;height:44px;border-radius:9px;border:1px solid rgba(0,0,0,.55);cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25);padding:0;transition:transform .05s}
+.sa-keys button:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.5)}
+.sa-k-num{background:linear-gradient(180deg,#d9b27c,#b88a52);color:#2a1808}
+.sa-k-fn{background:linear-gradient(180deg,#5a3a20,#432813);color:#f6e7cf}
+.sa-k-op{background:linear-gradient(180deg,#8f5f30,#744a22);color:#fff3dc}
+.sa-k-eq{background:linear-gradient(180deg,#e6b878,#c98f47);color:#1b1107;font-weight:700}
+.sa-k-clr{background:linear-gradient(180deg,#9a4a2c,#7a3519);color:#fff3dc}
+</style>
 </head>
 <body>
 
@@ -25,6 +77,8 @@
     <a href="#home">Home</a>
     <a href="#library">Library</a>
     <a href="#about">About</a>
+    <a href="#calculator-guide">Calculator</a>
+    <a href="#author">Author</a>
   </nav>
 </header>
 
@@ -93,11 +147,60 @@
       <article><b>M</b><h3>Mathematics</h3><p>The language that sits underneath everything else.</p></article>
     </div>
   </section>
+
+  <!-- ===== NEW: Scientific calculator guide ===== -->
+  <section class="about" id="calculator-guide">
+    <div class="section-head">
+      <p class="eyebrow">Tools</p>
+      <h2>The <em>Scientific Calculator</em></h2>
+      <p class="lead">STEM Atlas has a built-in scientific calculator carved from the same wood as the library. It works fully inside your browser, with no downloads and no sign-ups.</p>
+    </div>
+    <div class="sa-guide">
+      <h3>How to open it</h3>
+      <ol>
+        <li>Tap the wooden <strong>calculator button</strong> on the right side of the screen, just below the top. It is there on every part of the page.</li>
+        <li>The calculator opens on top of whatever you are doing. Close it with <strong>✕</strong>, the <kbd>Esc</kbd> key, or by tapping outside it.</li>
+      </ol>
+      <h3>How to use it</h3>
+      <ol>
+        <li>Type with the keys or your keyboard, then press <strong>=</strong> or <kbd>Enter</kbd>.</li>
+        <li><strong>Deg / Rad</strong> switches the angle mode for sin, cos, tan and their inverses.</li>
+        <li>Functions open a bracket for you, for example <kbd>sin(</kbd>. Any bracket you forget to close is closed automatically.</li>
+        <li><strong>Ans</strong> inserts your last result. <strong>⌫</strong> deletes one step, <strong>AC</strong> clears everything.</li>
+        <li>Available: trigonometry, inverse trig, ln, log, square root, powers, x², 1/x, eˣ, 10ˣ, factorial, π, e, brackets and ±.</li>
+      </ol>
+      <p class="sa-center"><button class="btn" type="button" onclick="saOpenCalc()">Open the calculator</button></p>
+    </div>
+  </section>
+
+  <!-- ===== NEW: About the Author ===== -->
+  <section class="about" id="author">
+    <div class="section-head">
+      <p class="eyebrow">The Writer</p>
+      <h2>About the <em>Author</em></h2>
+    </div>
+
+    <!-- ============================================================
+         >>> WRITE YOUR TEXT HERE. One <p>...</p> per paragraph. <<<
+         Add as many paragraphs as you like.
+         ============================================================ -->
+    <div class="sa-author-text">
+      <p>Write your first paragraph here. Tell readers who you are.</p>
+      <p>Write your second paragraph here. Why you write about STEM.</p>
+      <p>Add more paragraphs by copying one of these lines.</p>
+    </div>
+
+    <div class="sa-connect">
+      <h3>Connect &amp; Support</h3>
+      <!-- the two QR cards are built automatically by the script near the bottom of this file -->
+      <div class="sa-qr-grid" id="sa-qr-grid"></div>
+    </div>
+  </section>
 </main>
 
 <footer>
   <p><span class="brand-name">STEM Atlas</span></p>
-  <p>© <span id="year"></span> STEM Atlas · Science · Technology · Engineering · Mathematics</p>
+  <p>© <span id="year"></span> STEM Atlas · Milan C. Soni · Science · Technology · Engineering · Mathematics</p>
 </footer>
 
 <!-- book details pop-up -->
@@ -131,6 +234,285 @@
   <div class="reader-msg" id="rMsg"></div>
 </div>
 
+<!-- ===== NEW: calculator button + popup ===== -->
+<button class="sa-calc-fab sa-wood" id="saCalcFab" type="button" aria-label="Open scientific calculator" title="Scientific calculator">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="4" y="2.5" width="16" height="19" rx="2.5"/><rect x="7" y="5.5" width="10" height="4" rx=".8"/>
+    <circle cx="8.5" cy="13" r=".6" fill="currentColor"/><circle cx="12" cy="13" r=".6" fill="currentColor"/><circle cx="15.5" cy="13" r=".6" fill="currentColor"/>
+    <circle cx="8.5" cy="16" r=".6" fill="currentColor"/><circle cx="12" cy="16" r=".6" fill="currentColor"/><circle cx="15.5" cy="16" r=".6" fill="currentColor"/>
+    <circle cx="8.5" cy="19" r=".6" fill="currentColor"/><circle cx="12" cy="19" r=".6" fill="currentColor"/><circle cx="15.5" cy="19" r=".6" fill="currentColor"/>
+  </svg>
+  <span>CALC</span>
+</button>
+
+<div class="sa-calc-overlay" id="saCalcOverlay" role="dialog" aria-modal="true" aria-label="Scientific calculator">
+  <div class="sa-calc sa-wood">
+    <div class="sa-calc-top"><span>STEM Atlas · Scientific</span><button class="sa-calc-close" id="saCalcClose" type="button" aria-label="Close calculator">✕</button></div>
+    <div class="sa-calc-screen">
+      <div class="sa-calc-mode" id="saMode">DEG</div>
+      <div class="sa-calc-hist" id="saHist"></div>
+      <div class="sa-calc-disp" id="saDisp">0</div>
+    </div>
+    <div class="sa-keys" id="saKeys">
+      <button class="sa-k-fn" data-a="mode" id="saModeBtn">Deg</button>
+      <button class="sa-k-fn" data-k="sin(">sin</button>
+      <button class="sa-k-fn" data-k="cos(">cos</button>
+      <button class="sa-k-fn" data-k="tan(">tan</button>
+      <button class="sa-k-clr" data-a="del">⌫</button>
+
+      <button class="sa-k-fn" data-k="π">π</button>
+      <button class="sa-k-fn" data-k="asin(">sin⁻¹</button>
+      <button class="sa-k-fn" data-k="acos(">cos⁻¹</button>
+      <button class="sa-k-fn" data-k="atan(">tan⁻¹</button>
+      <button class="sa-k-clr" data-a="ac">AC</button>
+
+      <button class="sa-k-fn" data-k="e">e</button>
+      <button class="sa-k-fn" data-k="ln(">ln</button>
+      <button class="sa-k-fn" data-k="log(">log</button>
+      <button class="sa-k-fn" data-k="sqrt(">√</button>
+      <button class="sa-k-fn" data-k="^2">x²</button>
+
+      <button class="sa-k-fn" data-k="(">(</button>
+      <button class="sa-k-fn" data-k=")">)</button>
+      <button class="sa-k-fn" data-k="^">xʸ</button>
+      <button class="sa-k-fn" data-k="!">n!</button>
+      <button class="sa-k-fn" data-k="^(-1)">1/x</button>
+
+      <button class="sa-k-num" data-k="7">7</button>
+      <button class="sa-k-num" data-k="8">8</button>
+      <button class="sa-k-num" data-k="9">9</button>
+      <button class="sa-k-op" data-k="÷">÷</button>
+      <button class="sa-k-fn" data-k="e^(">eˣ</button>
+
+      <button class="sa-k-num" data-k="4">4</button>
+      <button class="sa-k-num" data-k="5">5</button>
+      <button class="sa-k-num" data-k="6">6</button>
+      <button class="sa-k-op" data-k="×">×</button>
+      <button class="sa-k-fn" data-k="10^(">10ˣ</button>
+
+      <button class="sa-k-num" data-k="1">1</button>
+      <button class="sa-k-num" data-k="2">2</button>
+      <button class="sa-k-num" data-k="3">3</button>
+      <button class="sa-k-op" data-k="−">−</button>
+      <button class="sa-k-fn" data-k="Ans">Ans</button>
+
+      <button class="sa-k-num" data-k="0">0</button>
+      <button class="sa-k-num" data-k=".">.</button>
+      <button class="sa-k-num" data-a="neg">±</button>
+      <button class="sa-k-op" data-k="+">+</button>
+      <button class="sa-k-eq" data-a="eq">=</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== NEW: QR codes + calculator logic (self-contained, runs in its own scope) ===== -->
+<script>
+(function(){
+/* ==========================================================
+   >>> QR CODES + BUTTON LINKS: EDIT ONLY THIS BLOCK <<<
+   - image : file name of the QR picture you upload to your
+             GitHub repo (same folder as index.html).
+             Upload "qr1.png" and "qr2.png" and they appear
+             automatically after the site redeploys.
+   - link  : where the button under that QR code leads.
+   - title / button : the text shown on the card.
+   ========================================================== */
+var SA_QR = [
+  { title:"QR Code 1", image:"qr1.png", link:"PASTE_LINK_1_HERE", button:"Button 1" },
+  { title:"QR Code 2", image:"qr2.png", link:"PASTE_LINK_2_HERE", button:"Button 2" }
+];
+
+/* ---------- QR cards builder ---------- */
+var grid = document.getElementById('sa-qr-grid');
+if (grid) SA_QR.forEach(function(q){
+  var card = document.createElement('div'); card.className = 'sa-qr-card';
+  var h = document.createElement('h3'); h.textContent = q.title; card.appendChild(h);
+  var img = new Image(); img.alt = q.title + ' QR code'; img.loading = 'lazy';
+  img.onerror = function(){
+    var ph = document.createElement('div'); ph.className = 'sa-qr-ph';
+    ph.textContent = 'Upload "' + q.image + '" to your GitHub repo';
+    img.replaceWith(ph);
+  };
+  img.src = q.image; card.appendChild(img);
+  var a = document.createElement('a'); a.className = 'btn'; a.textContent = q.button;
+  a.href = q.link; a.target = '_blank'; a.rel = 'noopener noreferrer'; card.appendChild(a);
+  grid.appendChild(card);
+});
+
+/* ---------- Calculator ---------- */
+var overlay = document.getElementById('saCalcOverlay');
+var dispEl = document.getElementById('saDisp'), histEl = document.getElementById('saHist');
+var modeEl = document.getElementById('saMode'), modeBtn = document.getElementById('saModeBtn');
+var expr = '', deg = true, ans = 0, fresh = false, prevOverflow = '';
+
+function openCalc(){
+  if (overlay.classList.contains('open')) return;
+  prevOverflow = document.body.style.overflow;
+  overlay.classList.add('open'); document.body.style.overflow = 'hidden';
+}
+function closeCalc(){
+  if (!overlay.classList.contains('open')) return;
+  overlay.classList.remove('open'); document.body.style.overflow = prevOverflow;
+}
+window.saOpenCalc = openCalc;
+document.getElementById('saCalcFab').addEventListener('click', openCalc);
+document.getElementById('saCalcClose').addEventListener('click', closeCalc);
+overlay.addEventListener('click', function(e){ if (e.target === overlay) closeCalc(); });
+
+function fmt(v){
+  if (!isFinite(v)) return 'Error';
+  if (Math.abs(v) < 1e-12) v = 0;
+  return String(parseFloat(v.toPrecision(12)));
+}
+function fact(n){
+  if (n < 0 || n !== Math.floor(n) || n > 170) throw 0;
+  var r = 1; for (var i = 2; i <= n; i++) r *= i; return r;
+}
+
+/* Safe expression parser (no eval, no APIs) */
+function evaluate(src){
+  var s = src.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-');
+  var open = (s.match(/\(/g)||[]).length - (s.match(/\)/g)||[]).length;
+  while (open-- > 0) s += ')';
+  var re = /\s*(?:(\d+\.?\d*(?:e[+-]\d+)?|\.\d+)|(asin|acos|atan|sinh|cosh|tanh|sin|cos|tan|ln|log|sqrt|cbrt|abs|exp|Ans|π|e)|(.))/y;
+  var tk = [], m; re.lastIndex = 0;
+  while (re.lastIndex < s.length && (m = re.exec(s))){
+    if (m[1] !== undefined) tk.push({t:'n', v:parseFloat(m[1])});
+    else if (m[2] !== undefined) tk.push({t:'i', v:m[2]});
+    else tk.push({t:'o', v:m[3]});
+  }
+  var i = 0;
+  function isOp(p, c){ return p && p.t === 'o' && p.v === c; }
+  function expression(){
+    var v = term();
+    while (isOp(tk[i],'+') || isOp(tk[i],'-')){ var o = tk[i++].v; var r = term(); v = o === '+' ? v + r : v - r; }
+    return v;
+  }
+  function term(){
+    var v = unary();
+    for(;;){
+      var p = tk[i]; if (!p) break;
+      if (isOp(p,'*') || isOp(p,'/')){ i++; var r = unary(); v = p.v === '*' ? v * r : v / r; }
+      else if (p.t === 'n' || p.t === 'i' || isOp(p,'(')) v *= unary();   /* implicit multiplication: 2π, 3(4) */
+      else break;
+    }
+    return v;
+  }
+  function unary(){
+    if (isOp(tk[i],'-')){ i++; return -unary(); }
+    if (isOp(tk[i],'+')){ i++; return unary(); }
+    return power();
+  }
+  function power(){
+    var b = postfix();
+    if (isOp(tk[i],'^')){ i++; return Math.pow(b, unary()); }
+    return b;
+  }
+  function postfix(){
+    var v = primary();
+    while (isOp(tk[i],'!')){ i++; v = fact(v); }
+    return v;
+  }
+  function toRad(x){ return deg ? x * Math.PI / 180 : x; }
+  function fromRad(x){ return deg ? x * 180 / Math.PI : x; }
+  function primary(){
+    var p = tk[i++]; if (!p) throw 0;
+    if (p.t === 'n') return p.v;
+    if (isOp(p,'(')){ var v = expression(); if (!isOp(tk[i],')')) throw 0; i++; return v; }
+    if (p.t === 'i'){
+      if (p.v === 'π') return Math.PI;
+      if (p.v === 'e') return Math.E;
+      if (p.v === 'Ans') return ans;
+      if (!isOp(tk[i],'(')) throw 0;
+      i++; var a = expression(); if (!isOp(tk[i],')')) throw 0; i++;
+      switch (p.v){
+        case 'sin': return Math.sin(toRad(a));
+        case 'cos': return Math.cos(toRad(a));
+        case 'tan':
+          if (deg && Math.abs(a % 180) === 90) throw 0;
+          return Math.tan(toRad(a));
+        case 'asin': return fromRad(Math.asin(a));
+        case 'acos': return fromRad(Math.acos(a));
+        case 'atan': return fromRad(Math.atan(a));
+        case 'sinh': return Math.sinh(a);
+        case 'cosh': return Math.cosh(a);
+        case 'tanh': return Math.tanh(a);
+        case 'ln':   return Math.log(a);
+        case 'log':  return Math.log10(a);
+        case 'sqrt': return Math.sqrt(a);
+        case 'cbrt': return Math.cbrt(a);
+        case 'abs':  return Math.abs(a);
+        case 'exp':  return Math.exp(a);
+      }
+    }
+    throw 0;
+  }
+  var res = expression();
+  if (i < tk.length) throw 0;
+  return res;
+}
+
+function show(){ dispEl.textContent = expr || '0'; dispEl.scrollLeft = dispEl.scrollWidth; }
+function input(k){
+  if (fresh){
+    if (!/^[+\-−×÷^!)]/.test(k)) expr = '';
+    fresh = false;
+  }
+  if (expr === 'Error') expr = '';
+  expr += k; show();
+}
+function equals(){
+  if (!expr) return;
+  try{
+    var r = evaluate(expr);
+    if (!isFinite(r) || isNaN(r)) throw 0;
+    histEl.textContent = expr + ' =';
+    ans = parseFloat(fmt(r)); expr = fmt(r); fresh = true;
+  }catch(e){ histEl.textContent = expr; expr = 'Error'; fresh = true; }
+  show();
+}
+function action(a){
+  if (a === 'ac'){ expr = ''; histEl.textContent = ''; fresh = false; }
+  else if (a === 'del'){
+    if (expr === 'Error') expr = '';
+    else expr = expr.replace(/(asin\(|acos\(|atan\(|sinh\(|cosh\(|tanh\(|sin\(|cos\(|tan\(|ln\(|log\(|sqrt\(|cbrt\(|abs\(|exp\(|Ans|.)$/, '');
+    fresh = false;
+  }
+  else if (a === 'eq') return equals();
+  else if (a === 'mode'){
+    deg = !deg; modeEl.textContent = deg ? 'DEG' : 'RAD'; modeBtn.textContent = deg ? 'Deg' : 'Rad';
+  }
+  else if (a === 'neg'){
+    if (expr === 'Error') expr = '';
+    expr = expr ? (expr.charAt(0) === '−' ? expr.slice(1) : '−' + expr) : '−';
+    fresh = false;
+  }
+  show();
+}
+document.getElementById('saKeys').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.k) input(b.dataset.k); else if (b.dataset.a) action(b.dataset.a);
+});
+
+/* Keyboard support while the calculator is open */
+document.addEventListener('keydown', function(e){
+  if (!overlay.classList.contains('open')) return;
+  var k = e.key;
+  if (k === 'Escape'){ e.stopPropagation(); closeCalc(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (/^[0-9.()+^!]$/.test(k)) input(k);
+  else if (k === '*') input('×');
+  else if (k === '/') input('÷');
+  else if (k === '-') input('−');
+  else if (k === 'Enter' || k === '=') equals();
+  else if (k === 'Backspace') action('del');
+  else if (k === 'Delete') action('ac');
+  else return;
+  e.preventDefault();
+}, true);
+})();
+</script>
+
 <script>
 (function () {
   var v = Date.now();
@@ -142,4 +524,4 @@
 })();
 </script>
 </body>
-</html>
+</html
