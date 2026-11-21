@@ -1,0 +1,21 @@
+{
+  "name": "STEM Atlas",
+  "short_name": "STEM Atlas",
+  "description": "Free digital library of STEM books by Milan C. Soni.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0806",
+  "theme_color": "#0a0806",
+  "icons": [
+    {
+      "src": "/favicon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
